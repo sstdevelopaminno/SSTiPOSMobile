@@ -1,6 +1,184 @@
-﻿import "server-only";import {randomUUID} from "node:crypto";import {createServiceClient} from "@/lib/supabase/server";import {setMobileSessionCookie} from "@/lib/auth/session";import type {BranchRole} from "@/types/contracts";
-const contexts=new Map<string,{tenantId:string;branchId?:string;expiresAt:number}>();
-export async function verifyStoreCode(storeCode:string){const supabase=createServiceClient();const code=storeCode.trim().toUpperCase();const {data:tenant,error}=await supabase.from("tenants").select("id,code,name,is_active").eq("code",code).maybeSingle();if(error||!tenant||!tenant.is_active)return null;const {data:branches}=await supabase.from("branches").select("id,name,code,is_active").eq("tenant_id",tenant.id).eq("is_active",true).order("name");const contextId=randomUUID();contexts.set(contextId,{tenantId:tenant.id,branchId:branches?.length===1?branches[0].id:undefined,expiresAt:Date.now()+10*60000});return{contextId,tenant:{id:tenant.id,code:tenant.code,name:tenant.name},branches:branches??[]}}
-export function selectBranch(contextId:string,branchId:string){const ctx=contexts.get(contextId);if(!ctx||ctx.expiresAt<=Date.now())return false;ctx.branchId=branchId;return true}
-export async function verifyEmployeeAndCreateSession(contextId:string,employeeCode:string,pin:string){if(!pin)return null;const ctx=contexts.get(contextId);if(!ctx||ctx.expiresAt<=Date.now()||!ctx.branchId)return null;const supabase=createServiceClient();const {data:profile}=await supabase.from("pos_user_profiles").select("id,employee_code,display_name,is_active").eq("tenant_id",ctx.tenantId).eq("employee_code",employeeCode.trim()).eq("is_active",true).maybeSingle();if(!profile)return null;const {data:roleRow}=await supabase.from("user_branch_roles").select("role,is_active").eq("tenant_id",ctx.tenantId).eq("branch_id",ctx.branchId).eq("user_id",profile.id).eq("is_active",true).maybeSingle();if(!roleRow)return null;const role=roleRow.role as BranchRole;const {data:session}=await supabase.from("pos_sessions").insert({tenant_id:ctx.tenantId,branch_id:ctx.branchId,user_id:profile.id,role,login_method:"mobile_pin",status:"active",metadata:{source_app:"mobile_web"}}).select("id").single();if(!session)return null;await setMobileSessionCookie({tenantId:ctx.tenantId,branchId:ctx.branchId,userId:profile.id,role,sessionId:session.id});contexts.delete(contextId);return{user:{id:profile.id,name:profile.display_name??employeeCode},role}}
+﻿import "server-only";
+
+import bcrypt from "bcryptjs";
+import { createServiceClient } from "@/lib/supabase/server";
+import { createMobileFlow, type MobileLoginFlow } from "@/lib/auth/mobile-flow";
+import type { BranchRole } from "@/types/contracts";
+
+type BranchRow = { id: string; code: string | null; name: string | null; is_active: boolean };
+type TenantRow = { id: string; code: string; name: string; is_active: boolean };
+type UserProfileRow = { id: string; email: string | null; full_name: string | null; pin_hash: string | null; is_active: boolean };
+
+type UserRoleRow = {
+  user_id: string;
+  role: BranchRole;
+  users_profiles: UserProfileRow | UserProfileRow[] | null;
+};
+
+function normalizeEmployeeCode(value: string) {
+  return String(value ?? "").trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function normalizeDigits(value: string) {
+  return String(value ?? "").replace(/\D/g, "");
+}
+
+function deriveEmployeeCode(userId: string) {
+  return `EMP-${String(userId).replace(/-/g, "").toUpperCase().slice(-6)}`;
+}
+
+function employeeCandidates(input: string) {
+  const normalized = normalizeEmployeeCode(input);
+  const digits = normalizeDigits(normalized);
+  const set = new Set<string>();
+  if (normalized) set.add(normalized);
+  if (digits) {
+    const last6 = digits.slice(-6);
+    const padded = last6.padStart(6, "0");
+    set.add(last6);
+    set.add(padded);
+    set.add(`EMP-${last6}`);
+    set.add(`EMP-${padded}`);
+  }
+  return set;
+}
+
+function roleToPermissions(role: BranchRole) {
+  if (role === "owner" || role === "manager") {
+    return ["pos.sales.access", "pos.device.override_in_use", "pos.shift.open", "pos.sales.refund", "pos.sales.discount", "pos.sales.void", "pos.reports.view"];
+  }
+  if (role === "accountant") return ["pos.sales.access", "pos.reports.view"];
+  return ["pos.sales.access", "pos.shift.open"];
+}
+
+async function loadEmployeeCodes(tenantId: string, userIds: string[]) {
+  const supabase = createServiceClient();
+  const map = new Map<string, string>();
+  if (!userIds.length) return map;
+  const { data, error } = await supabase.from("pos_user_profiles").select("user_id,employee_code").eq("tenant_id", tenantId).in("user_id", userIds);
+  if (error) return map;
+  for (const row of (data ?? []) as Array<{ user_id: string; employee_code: string | null }>) {
+    if (row.employee_code) map.set(row.user_id, normalizeEmployeeCode(row.employee_code));
+  }
+  return map;
+}
+
+export async function verifyStoreCode(storeCode: string) {
+  const supabase = createServiceClient();
+  const code = storeCode.trim().toUpperCase();
+  const { data: tenant, error: tenantError } = await supabase.from("tenants").select("id,code,name,is_active").eq("code", code).maybeSingle<TenantRow>();
+  if (tenantError || !tenant || tenant.is_active === false) return null;
+
+  const { data: branches, error: branchError } = await supabase
+    .from("branches")
+    .select("id,code,name,is_active")
+    .eq("tenant_id", tenant.id)
+    .eq("is_active", true)
+    .order("name", { ascending: true });
+  if (branchError) throw new Error(branchError.message);
+
+  const branchRows = (branches ?? []) as BranchRow[];
+  const { data: context, error: contextError } = await supabase
+    .from("pos_login_contexts")
+    .insert({
+      tenant_id: tenant.id,
+      branch_id: branchRows.length === 1 ? branchRows[0].id : null,
+      store_code: tenant.code,
+      status: "active",
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+      metadata: { source_app: "mobile_web" }
+    })
+    .select("id")
+    .single<{ id: string }>();
+  if (contextError || !context) throw new Error(contextError?.message ?? "login_context_create_failed");
+
+  const flow = createMobileFlow({
+    stage: branchRows.length === 1 ? "branch_selected" : "store_verified",
+    contextId: context.id,
+    tenantId: tenant.id,
+    tenantCode: tenant.code,
+    tenantName: tenant.name,
+    branchId: branchRows.length === 1 ? branchRows[0].id : null,
+    branchCode: branchRows.length === 1 ? branchRows[0].code : null,
+    branchName: branchRows.length === 1 ? branchRows[0].name : null
+  });
+
+  return { flow, tenant: { id: tenant.id, code: tenant.code, name: tenant.name }, branches: branchRows, nextStep: branchRows.length === 1 ? "employee" : "branch" };
+}
+
+export async function listBranches(flow: MobileLoginFlow) {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase.from("branches").select("id,code,name,is_active").eq("tenant_id", flow.tenantId).eq("is_active", true).order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as BranchRow[];
+}
+
+export async function selectBranch(flow: MobileLoginFlow, branchId: string) {
+  const branches = await listBranches(flow);
+  const branch = branches.find((item) => item.id === branchId);
+  if (!branch) return null;
+  const supabase = createServiceClient();
+  await supabase.from("pos_login_contexts").update({ branch_id: branch.id }).eq("id", flow.contextId).eq("tenant_id", flow.tenantId).eq("status", "active");
+  return createMobileFlow({ ...flow, stage: "branch_selected", branchId: branch.id, branchCode: branch.code, branchName: branch.name });
+}
+
+export async function verifyEmployeeAndCreateSession(flow: MobileLoginFlow, employeeCode: string, pin: string) {
+  if (!flow.branchId || flow.stage !== "branch_selected") return null;
+  const supabase = createServiceClient();
+  const candidates = employeeCandidates(employeeCode);
+
+  const { data, error } = await supabase
+    .from("user_branch_roles")
+    .select("user_id,role,users_profiles!inner(id,email,full_name,pin_hash,is_active)")
+    .eq("tenant_id", flow.tenantId)
+    .eq("branch_id", flow.branchId);
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as UserRoleRow[];
+  const codeByUser = await loadEmployeeCodes(flow.tenantId, rows.map((row) => row.user_id));
+  for (const row of rows) {
+    const profile = Array.isArray(row.users_profiles) ? row.users_profiles[0] : row.users_profiles;
+    if (!profile?.is_active || !profile.pin_hash) continue;
+    const customCode = codeByUser.get(profile.id) ?? "";
+    const derivedCode = deriveEmployeeCode(profile.id);
+    const email = normalizeEmployeeCode(profile.email ?? "");
+    const emailLocal = email.includes("@") ? email.split("@")[0] : email;
+    const matchedCode = candidates.has(customCode) || candidates.has(derivedCode) || candidates.has(normalizeDigits(customCode).slice(-6)) || candidates.has(normalizeDigits(derivedCode).slice(-6)) || candidates.has(email) || candidates.has(emailLocal);
+    if (!matchedCode) continue;
+    const pinOk = await bcrypt.compare(pin, profile.pin_hash);
+    if (!pinOk) return null;
+
+    const nowIso = new Date().toISOString();
+    await supabase.from("pos_sessions").update({ status: "revoked", revoked_at: nowIso }).eq("tenant_id", flow.tenantId).eq("branch_id", flow.branchId).eq("user_id", profile.id).eq("status", "active");
+
+    const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
+    const { data: session, error: sessionError } = await supabase
+      .from("pos_sessions")
+      .insert({
+        tenant_id: flow.tenantId,
+        branch_id: flow.branchId,
+        user_id: profile.id,
+        role: row.role,
+        login_context_id: flow.contextId,
+        login_method: "pin",
+        status: "active",
+        expires_at: expiresAt,
+        metadata: { source_app: "mobile_web", employee_code: customCode || derivedCode }
+      })
+      .select("id")
+      .single<{ id: string }>();
+    if (sessionError || !session) throw new Error(sessionError?.message ?? "session_create_failed");
+
+    await supabase.from("pos_login_contexts").update({ status: "consumed", consumed_at: nowIso }).eq("id", flow.contextId).eq("tenant_id", flow.tenantId);
+
+    return {
+      sessionId: session.id,
+      user: { id: profile.id, name: profile.full_name ?? (customCode || derivedCode) },
+      role: row.role,
+      permissions: roleToPermissions(row.role)
+    };
+  }
+
+  return null;
+}
 

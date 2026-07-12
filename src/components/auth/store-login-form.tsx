@@ -25,8 +25,7 @@ export function StoreLoginForm() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message ?? "เข้าสู่ระบบไม่สำเร็จ");
-      sessionStorage.setItem("mobileLogin", JSON.stringify(json.data));
-      router.push(json.data.branches.length > 1 ? "/login/branch" : "/login/employee");
+      router.push(json.data.nextStep === "branch" ? "/login/branch" : "/login/employee");
     } catch {
       setError("เชื่อมต่อไม่ได้ กรุณาลองใหม่");
     } finally {
@@ -64,3 +63,4 @@ export function StoreLoginForm() {
     </form>
   );
 }
+

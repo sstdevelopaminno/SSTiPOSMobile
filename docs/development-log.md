@@ -44,3 +44,12 @@
 - Removed the Thai/EN language toggle from the store login card.
 - Centered the login card vertically and horizontally on the mobile screen.
 - Verification passed: `pnpm typecheck`, `pnpm lint`, `pnpm build`.
+
+## 2026-07-13 Shared Database Auth Flow
+
+- Replaced in-memory mobile login context with a signed HttpOnly mobile flow cookie.
+- Store code verification now creates a real `pos_login_contexts` row in the shared SSTiPOS Supabase database.
+- Branch selection now validates active branches from the shared `branches` table and updates the login context scope.
+- Employee login now verifies employee code against `user_branch_roles`/`pos_user_profiles`, verifies PIN against `users_profiles.pin_hash` with bcrypt, and creates a real `pos_sessions` row.
+- Removed client `sessionStorage` dependency from login flow.
+- Verification passed: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`.

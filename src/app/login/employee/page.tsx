@@ -1,2 +1,43 @@
-﻿"use client";import {useState} from "react";import {useRouter} from "next/navigation";import {AuthShell} from "@/components/auth/auth-shell";import {Button} from "@/components/ui/button";
-export default function EmployeePage(){const router=useRouter();const[employeeCode,setEmployeeCode]=useState("");const[pin,setPin]=useState("");const[loading,setLoading]=useState(false);const[error,setError]=useState("");async function submit(e:React.FormEvent){e.preventDefault();setLoading(true);setError("");const state=JSON.parse(sessionStorage.getItem("mobileLogin")??"null");try{const res=await fetch("/api/auth/employee/verify",{method:"POST",body:JSON.stringify({contextId:state.contextId,employeeCode,pin})});const json=await res.json();if(!res.ok)throw new Error(json.error?.message);router.push(json.data.redirectTo)}catch(err){setError(err instanceof Error?err.message:"เข้าสู่ระบบไม่สำเร็จ")}finally{setLoading(false)}}return <AuthShell title="ยืนยันพนักงาน" subtitle="Employee PIN"><form onSubmit={submit} className="space-y-4"><input className="w-full rounded-lg border px-4 py-3" placeholder="รหัสพนักงาน" value={employeeCode} onChange={e=>setEmployeeCode(e.target.value)}/><input className="w-full rounded-lg border px-4 py-3" placeholder="PIN" type="password" value={pin} onChange={e=>setPin(e.target.value)}/><Button disabled={loading} className="w-full">{loading?"กำลังเข้าสู่ระบบ...":"เข้าใช้งาน"}</Button>{error&&<p className="text-sm text-red-600">{error}</p>}</form></AuthShell>}
+﻿"use client";
+
+import { AuthShell } from "@/components/auth/auth-shell";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+export default function EmployeePage() {
+  const router = useRouter();
+  const [employeeCode, setEmployeeCode] = useState("");
+  const [pin, setPin] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/employee/verify", { method: "POST", body: JSON.stringify({ employeeCode, pin }) });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message ?? "เข้าสู่ระบบไม่สำเร็จ");
+      router.push(json.data.redirectTo);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <AuthShell title="ยืนยันพนักงาน" subtitle="Employee PIN">
+      <form onSubmit={submit} className="space-y-4">
+        <input className="w-full rounded-lg border px-4 py-3" placeholder="รหัสพนักงาน" value={employeeCode} onChange={(e) => setEmployeeCode(e.target.value)} />
+        <input className="w-full rounded-lg border px-4 py-3" placeholder="PIN" type="password" value={pin} onChange={(e) => setPin(e.target.value)} />
+        <Button disabled={loading || !employeeCode.trim() || !pin.trim()} className="w-full">
+          {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าใช้งาน"}
+        </Button>
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      </form>
+    </AuthShell>
+  );
+}

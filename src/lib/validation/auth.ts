@@ -1,4 +1,5 @@
-﻿import {z} from "zod";
-export const storeCodeSchema=z.object({storeCode:z.string().trim().min(2).max(64)});
-export const branchSelectSchema=z.object({contextId:z.string().uuid(),branchId:z.string().uuid()});
-export const employeeVerifySchema=z.object({contextId:z.string().uuid(),employeeCode:z.string().trim().min(1).max(64),pin:z.string().min(4).max(32)});
+﻿import { z } from "zod";
+
+export const storeCodeSchema = z.object({ storeCode: z.string().trim().min(2).max(64) });
+export const branchSelectSchema = z.object({ branchId: z.string().uuid() });
+export const employeeVerifySchema = z.object({ employeeCode: z.string().trim().min(1).max(64), pin: z.string().min(4).max(32) });
