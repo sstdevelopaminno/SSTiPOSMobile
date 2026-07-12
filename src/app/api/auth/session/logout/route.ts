@@ -1,0 +1,2 @@
+﻿import {clearMobileSessionCookie,readMobileSession} from "@/lib/auth/session";import {createServiceClient} from "@/lib/supabase/server";import {ok} from "@/lib/api/response";
+export async function POST(){const scope=await readMobileSession();if(scope){await createServiceClient().from("pos_sessions").update({status:"revoked",revoked_at:new Date().toISOString()}).eq("id",scope.sessionId)}await clearMobileSessionCookie();return ok({loggedOut:true})}

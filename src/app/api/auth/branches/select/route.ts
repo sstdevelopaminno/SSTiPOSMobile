@@ -1,0 +1,2 @@
+﻿import {fail,ok} from "@/lib/api/response";import {selectBranch} from "@/lib/auth/mobile-auth-service";import {branchSelectSchema} from "@/lib/validation/auth";
+export async function POST(request:Request){const body=branchSelectSchema.safeParse(await request.json().catch(()=>({})));if(!body.success)return fail("invalid_input","เลือกสาขาไม่ถูกต้อง",422);if(!selectBranch(body.data.contextId,body.data.branchId))return fail("context_expired","เซสชันเข้าสู่ระบบหมดอายุ",401);return ok({selected:true})}

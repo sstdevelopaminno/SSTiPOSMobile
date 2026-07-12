@@ -1,0 +1,3 @@
+﻿import Link from "next/link";import {Clock,Home,ReceiptText,Settings,ShoppingCart} from "lucide-react";
+const items=[["/dashboard",Home,"หน้าหลัก"],["/sales",ShoppingCart,"ขาย"],["/orders",ReceiptText,"บิล"],["/shifts",Clock,"กะ"],["/settings",Settings,"ตั้งค่า"]] as const;
+export function BottomNav(){return <nav className="fixed inset-x-0 bottom-0 z-20 border-t bg-white/95 px-2 pb-[env(safe-area-inset-bottom)]"><div className="mx-auto grid max-w-[430px] grid-cols-5">{items.map(([href,Icon,label])=><Link key={href} href={href} className="flex min-h-[60px] flex-col items-center justify-center gap-1 text-xs text-slate-600"><Icon size={20}/><span>{label}</span></Link>)}</div></nav>}

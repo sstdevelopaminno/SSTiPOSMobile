@@ -1,0 +1,1 @@
+{"name":"SSTiPOS Mobile","short_name":"SSTiPOS","description":"Mobile-first POS app for SSTiPOS stores","start_url":"/login/store","display":"standalone","orientation":"portrait","background_color":"#f8fafc","theme_color":"#061b33","icons":[{"src":"/brand/cpipos-logo.png","sizes":"512x512","type":"image/png","purpose":"any"}]}
