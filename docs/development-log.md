@@ -53,3 +53,9 @@
 - Employee login now verifies employee code against `user_branch_roles`/`pos_user_profiles`, verifies PIN against `users_profiles.pin_hash` with bcrypt, and creates a real `pos_sessions` row.
 - Removed client `sessionStorage` dependency from login flow.
 - Verification passed: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`.
+
+## 2026-07-13 Env and Login Smoke Test
+
+- Created local `.env.local` from the existing SSTiPOS backoffice env keys without committing secrets.
+- Verified real shared-database login smoke locally: `NDL-TH-001` -> `NDL-ONNUT-01` -> employee `sst182536` -> dashboard HTTP 200.
+- Confirmed `/login/store` HTML includes Next CSS assets on the fresh dev server.

@@ -78,23 +78,27 @@ export async function verifyStoreCode(storeCode: string) {
   if (branchError) throw new Error(branchError.message);
 
   const branchRows = (branches ?? []) as BranchRow[];
-  const { data: context, error: contextError } = await supabase
-    .from("pos_login_contexts")
-    .insert({
-      tenant_id: tenant.id,
-      branch_id: branchRows.length === 1 ? branchRows[0].id : null,
-      store_code: tenant.code,
-      status: "active",
-      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-      metadata: { source_app: "mobile_web" }
-    })
-    .select("id")
-    .single<{ id: string }>();
-  if (contextError || !context) throw new Error(contextError?.message ?? "login_context_create_failed");
+  let contextId = "";
+  if (branchRows.length === 1) {
+    const { data: context, error: contextError } = await supabase
+      .from("pos_login_contexts")
+      .insert({
+        tenant_id: tenant.id,
+        branch_id: branchRows[0].id,
+        store_code: tenant.code,
+        status: "active",
+        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        metadata: { source_app: "mobile_web" }
+      })
+      .select("id")
+      .single<{ id: string }>();
+    if (contextError || !context) throw new Error(contextError?.message ?? "login_context_create_failed");
+    contextId = context.id;
+  }
 
   const flow = createMobileFlow({
     stage: branchRows.length === 1 ? "branch_selected" : "store_verified",
-    contextId: context.id,
+    contextId,
     tenantId: tenant.id,
     tenantCode: tenant.code,
     tenantName: tenant.name,
@@ -118,8 +122,26 @@ export async function selectBranch(flow: MobileLoginFlow, branchId: string) {
   const branch = branches.find((item) => item.id === branchId);
   if (!branch) return null;
   const supabase = createServiceClient();
-  await supabase.from("pos_login_contexts").update({ branch_id: branch.id }).eq("id", flow.contextId).eq("tenant_id", flow.tenantId).eq("status", "active");
-  return createMobileFlow({ ...flow, stage: "branch_selected", branchId: branch.id, branchCode: branch.code, branchName: branch.name });
+  let contextId = flow.contextId;
+  if (contextId) {
+    await supabase.from("pos_login_contexts").update({ branch_id: branch.id }).eq("id", contextId).eq("tenant_id", flow.tenantId).eq("status", "active");
+  } else {
+    const { data: context, error } = await supabase
+      .from("pos_login_contexts")
+      .insert({
+        tenant_id: flow.tenantId,
+        branch_id: branch.id,
+        store_code: flow.tenantCode,
+        status: "active",
+        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        metadata: { source_app: "mobile_web" }
+      })
+      .select("id")
+      .single<{ id: string }>();
+    if (error || !context) throw new Error(error?.message ?? "login_context_create_failed");
+    contextId = context.id;
+  }
+  return createMobileFlow({ ...flow, stage: "branch_selected", contextId, branchId: branch.id, branchCode: branch.code, branchName: branch.name });
 }
 
 export async function verifyEmployeeAndCreateSession(flow: MobileLoginFlow, employeeCode: string, pin: string) {
@@ -181,4 +203,5 @@ export async function verifyEmployeeAndCreateSession(flow: MobileLoginFlow, empl
 
   return null;
 }
+
 
