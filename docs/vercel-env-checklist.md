@@ -28,3 +28,17 @@ Smoke test after redeploy:
 3. Select branch `NDL-ONNUT-01` if branch selection appears.
 4. Login with employee `sst182536` and PIN `182536`.
 5. Confirm dashboard loads for the selected branch.
+## Security Note
+
+Do not paste Vercel tokens or secret values into repository files, chat logs, screenshots, or generated documentation.
+
+For this project, env values must be entered manually in Vercel Dashboard by an authorized project owner because these values include `SUPABASE_SERVICE_ROLE_KEY` and `MOBILE_SESSION_SECRET`.
+
+Recommended safe path:
+
+1. Open Vercel Dashboard > `sstiposmobile` > Settings > Environment Variables.
+2. Add each required variable above for Production.
+3. Confirm values are copied from the same SSTiPOS Supabase project used by the main POS/backoffice app.
+4. Redeploy Production after saving env vars.
+5. Run the smoke test listed above.
+

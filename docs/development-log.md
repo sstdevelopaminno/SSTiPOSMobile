@@ -67,3 +67,9 @@
 - Production alias verified: `https://sstiposmobile.vercel.app`.
 - Verified production `/login/store` returns HTTP 200 and includes Next CSS assets plus CpIPOS content.
 - Vercel env values must be entered in Vercel Dashboard; secrets are intentionally not committed or printed.
+## 2026-07-13 Vercel Env Safety
+
+- Attempted Vercel env automation was stopped by secret-safety controls because it would transmit `SUPABASE_SERVICE_ROLE_KEY` and `MOBILE_SESSION_SECRET` from local `.env.local` to an external service.
+- Documented the safe manual Vercel Dashboard env setup path in `docs/vercel-env-checklist.md`.
+- No Vercel token or secret env values were written to repository files.
+
