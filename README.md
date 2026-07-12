@@ -10,7 +10,7 @@ pnpm dev
 ```
 
 ## Environment
-Use the same Supabase project/database as `SSTiPOS` and `SSTiPOSSupport`. Do not create a second database and do not commit real secrets. Required names are listed in `.env.example`.
+Use the same Supabase project/database as `SSTiPOS` and `SSTiPOSSupport`. Do not create a second database and do not commit real secrets. Required names are listed in `.env.example` and `docs/vercel-env-checklist.md`.
 
 ## Commands
 ```powershell
@@ -23,12 +23,18 @@ pnpm build
 ## Authentication Flow
 `/login/store -> /login/branch -> /login/employee -> /dashboard`
 
-The server resolves tenant, branch, user, role, session and feature state. Client-submitted scope is never trusted.
+The server resolves tenant, branch, user, role, session and feature state from the shared SSTiPOS Supabase database. Client-submitted scope is never trusted.
+
+## Deployment
+Production alias: `https://sstiposmobile.vercel.app`
+
+Before production login tests on Vercel, set the required Supabase and mobile session env vars in Vercel Project Settings. See `docs/vercel-env-checklist.md`.
 
 ## Known Limitations
-- Current login context is in-memory for Phase 1 scaffold; production should reuse `pos_login_contexts` or apply a reviewed mobile context migration.
-- PIN hash verification is marked for integration with the existing SSTiPOS verifier before production login use.
 - Sales write flow is not implemented in Phase 1.
+- Vercel runtime database login requires production env vars to be configured in Vercel Dashboard.
 
-## Next Phase
-Wire the mobile auth service directly to existing SSTiPOS auth/session utilities or replace the in-memory context with a reviewed database-backed mobile context.
+## Smoke Test Account
+Use the shared SSTiPOS dev/production database test path after env is configured:
+
+`NDL-TH-001 -> NDL-ONNUT-01 -> sst182536 / 182536`
