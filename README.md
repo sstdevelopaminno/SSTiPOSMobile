@@ -6,7 +6,7 @@ Mobile-first Web App/PWA for SSTiPOS store owners, managers, and staff.
 ```powershell
 pnpm install
 Copy-Item .env.example .env.local
-pnpm dev
+npm run dev
 ```
 
 ## Environment
@@ -14,10 +14,12 @@ Use the same Supabase project/database as `SSTiPOS` and `SSTiPOSSupport`. Do not
 
 ## Commands
 ```powershell
-pnpm typecheck
-pnpm lint
-pnpm test
-pnpm build
+npm run dev          # live reload for UI/system development
+npm run dev:stable   # production-like local run after npm run build
+npm run typecheck
+npm run lint
+npm test
+npm run build
 ```
 
 ## Authentication Flow

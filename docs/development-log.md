@@ -178,3 +178,30 @@
 - Added quick opening-cash buttons for `0`, `500`, `1,000`, and `2,000`.
 - Replaced the sales placeholder with a blank mobile POS starter surface titled `พร้อมขาย` for the next design pass.
 
+## 2026-07-13 Sales Mobile UI Starter
+
+- Rebuilt `/sales` into a mobile POS launcher matching the provided reference: ready-to-sell status card, quick actions, summary cards, recent sales, and POS starter banner.
+- Added sales header subtitle and a notification action slot to `MobileAppShell`.
+- Sales summary reads recent same-day orders for the selected tenant and branch, with mock fallback values when no orders exist.
+- Kept the sales screen guarded by open-shift and role checks before rendering the mobile POS UI.
+
+## 2026-07-13 Sales Branding Header
+
+- Removed the `SSTiPOS Mobile` eyebrow from the shared mobile app shell.
+- Added an optional brand slot to `MobileAppShell` so pages can render product branding without hard-coded shell text.
+- Added CpIPOS logo and wordmark beside the `ขาย` header and kept the notification action on the right.
+- Added a subtle CpIPOS watermark inside the ready-to-sell card background instead of using a large visible logo block.
+- Updated app metadata and login subtitle from `SSTiPOS Mobile` to `CpIPOS Mobile`.
+- Replaced the sales header and ready-card watermark image with the standalone CpIPOS symbol at `public/brand/cpipos-symbol.png` while keeping the `CpIPOS` name text.
+- Removed the sales page title/subtitle text so the top header shows only the CpIPOS brand row and notification action.
+
+## 2026-07-13 Live Dev and Sales Cleanup
+
+- Changed `npm run dev` back to `next dev` so UI and system edits hot reload immediately during development.
+- Kept production-like local testing available as `npm run dev:stable` after `npm run build`.
+- Kept optional Turbopack testing available as `npm run dev:turbo`, but it is no longer the default because prior local HMR pings were unstable.
+- Cleaned the pending sales/logo changes and kept the CpIPOS symbol asset at `public/brand/cpipos-symbol.png`.
+- Rewrote the `/sales` Thai UI strings to valid UTF-8 after the previous logo/header pass left mojibake text in the page.
+- Verification passed: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`.
+- Local live-dev smoke: `npm run dev -- --port 3017` opened a listener on port `3017`; the test process was stopped after verification.
+
