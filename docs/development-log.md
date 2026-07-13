@@ -212,3 +212,18 @@
 - Verification passed: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`.
 - Local live-dev smoke: `npm run dev -- --port 3017` opened a listener on port `3017`; the test process was stopped after verification.
 
+## 2026-07-13 Dev Cache Stability
+
+- Added a pre-dev cache cleanup so `npm run dev` clears `.next` before starting Next.js.
+- This prevents stale React client manifest errors such as `segment-explorer-node.js#SegmentViewNode`, `MODULE_NOT_FOUND`, and `__webpack_modules__[moduleId] is not a function` after repeated page edits.
+
+## 2026-07-14 Takeaway Cart Hold and Payment Popup
+
+- Moved the takeaway action buttons into the summary and cart cards so the screen reads as two connected POS surfaces instead of separate floating controls.
+- Added a payment popup from the `ชำระเงิน` button with cash and transfer choices, including payment-method icons.
+- Added database-backed held-bill APIs: `POST /api/mobile/sales/takeaway/hold` stores the draft order, line items, discounts, and totals as `orders.status = held`; `GET /api/mobile/sales/takeaway/held` lists held takeaway orders with line-item details.
+- Wired the `พักบิล` button to persist the current cart to the held order state, clear the current cart UI, and refresh the page for the next draft bill.
+- Wired the `รายการพัก` button to open a popup listing held bills and item details from the real tenant/branch database scope.
+- Improved click stability by separating held-list loading from hold-submit loading, disabling duplicate hold submits, and clearing the product-added notice timeout on component unmount.
+- Verification passed: `npm run typecheck`, `npm run lint`, `npm run build`.
+

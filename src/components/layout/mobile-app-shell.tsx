@@ -6,11 +6,16 @@ export function MobileAppShell({ children, title, subtitle, brand, action, scope
     <main
       className="mobile-shell mx-auto max-w-[430px]"
       style={{
+        position: "relative",
+        height: "100dvh",
         minHeight: "100dvh",
         maxWidth: 430,
         margin: "0 auto",
+        overflowX: "hidden",
+        overflowY: "auto",
+        overscrollBehavior: "contain",
         padding: "16px 16px max(88px, env(safe-area-inset-bottom))",
-        background: "#f5f8fb",
+        background: "#fff",
         color: "#0f2745",
         fontFamily: "Arial, Tahoma, sans-serif",
       }}
