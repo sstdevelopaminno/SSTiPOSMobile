@@ -7,6 +7,8 @@
 - [x] Generic Thai auth errors added.
 - [x] Basic rate limiter scaffolded.
 - [x] PWA cache excludes login/auth/session/mobile APIs.
-- [ ] Replace in-memory login context with DB-backed context before production.
-- [ ] Integrate existing PIN hash verifier before production.
+- [x] DB-backed login context integrated with `pos_login_contexts`.
+- [x] Employee-code-only verification is server-side against branch membership and `pos_user_profiles`.
+- [x] Cashier device selection is server-side against `branch_devices` before `pos_sessions` creation.
+- [x] Dashboard and shift APIs scope open-shift checks by tenant, branch, and selected `device_code`.
 - [ ] Add feature gate resolver before enabling paid features.

@@ -21,6 +21,9 @@ export type MobileLoginFlow = {
   employeeCode?: string | null;
   employeeName?: string | null;
   role?: BranchRole | null;
+  deviceId?: string | null;
+  deviceCode?: string | null;
+  deviceName?: string | null;
   iat: number;
   exp: number;
 };

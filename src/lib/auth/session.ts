@@ -1,5 +1,28 @@
-﻿import "server-only";import {cookies} from "next/headers";import {createHmac,timingSafeEqual} from "node:crypto";import {getEnv} from "@/lib/env";import type {MobileScope} from "@/types/contracts";
-function sign(v:string){return createHmac("sha256",getEnv().MOBILE_SESSION_SECRET).update(v).digest("base64url")}
-export async function setMobileSessionCookie(scope:MobileScope){const e=getEnv();const exp=Date.now()+e.MOBILE_SESSION_TTL_HOURS*3600000;const payload=Buffer.from(JSON.stringify({...scope,exp})).toString("base64url");const token=`${payload}.${sign(payload)}`;(await cookies()).set(e.MOBILE_SESSION_COOKIE_NAME,token,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",path:"/",expires:new Date(exp)})}
-export async function clearMobileSessionCookie(){(await cookies()).delete(getEnv().MOBILE_SESSION_COOKIE_NAME)}
-export async function readMobileSession():Promise<MobileScope|null>{const e=getEnv();const raw=(await cookies()).get(e.MOBILE_SESSION_COOKIE_NAME)?.value;if(!raw)return null;const[p,s]=raw.split(".");if(!p||!s)return null;const ex=sign(p);if(!timingSafeEqual(Buffer.from(s),Buffer.from(ex)))return null;const x=JSON.parse(Buffer.from(p,"base64url").toString("utf8")) as MobileScope&{exp:number};if(x.exp<=Date.now())return null;return{tenantId:x.tenantId,branchId:x.branchId,userId:x.userId,role:x.role,sessionId:x.sessionId}}
+import "server-only";
+
+import { cookies } from "next/headers";
+import { decodeMobileSessionToken, encodeMobileSessionToken } from "@/lib/auth/session-token";
+import { getEnv } from "@/lib/env";
+import type { MobileScope } from "@/types/contracts";
+
+export async function setMobileSessionCookie(scope: MobileScope) {
+  const env = getEnv();
+  const exp = Date.now() + env.MOBILE_SESSION_TTL_HOURS * 3600000;
+  const token = encodeMobileSessionToken(scope, exp);
+  (await cookies()).set(env.MOBILE_SESSION_COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires: new Date(exp)
+  });
+}
+
+export async function clearMobileSessionCookie() {
+  (await cookies()).delete(getEnv().MOBILE_SESSION_COOKIE_NAME);
+}
+
+export async function readMobileSession(): Promise<MobileScope | null> {
+  const raw = (await cookies()).get(getEnv().MOBILE_SESSION_COOKIE_NAME)?.value;
+  return raw ? decodeMobileSessionToken(raw) : null;
+}

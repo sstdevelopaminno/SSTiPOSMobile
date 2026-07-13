@@ -4,9 +4,27 @@
 - [ ] inactive tenant
 - [ ] single-branch auto-selection
 - [ ] multiple-branch selection
+- [ ] loading popup appears after store-code submit
+- [ ] loading popup appears after branch next submit
+- [ ] loading popup appears after employee-code submit
+- [ ] loading popup appears after cashier-device open-cash submit
+- [ ] vertical scrollbar is hidden on mobile auth screens
 - [ ] invalid employee code
-- [ ] invalid PIN
 - [ ] employee not assigned to branch
+- [ ] device selection shows only unlocked/available cashier devices
+- [ ] locked or inactive cashier device cannot create session
+- [ ] employee login does not skip cashier device selection
+- [ ] dashboard redirects visually to open-shift gate when no shift is open for selected device
+- [ ] bottom mobile menu is hidden before opening shift
+- [ ] gate button opens the `ปิดยอด` page
+- [ ] opening shift requires entering opening cash/change amount
+- [ ] opening cash is saved to `shifts.opening_cash` and `shifts.expected_cash`
+- [ ] opening shift redirects to the `ขาย` menu and does not leave the loading popup stuck
+- [ ] open shift from mobile then dashboard loads normally
+- [ ] after opening shift, bottom menu appears with `ขาย`, `รายการขาย`, `จัดการสินค้า`, `ปิดยอด`, `ตั้งค่า` according to role
+- [ ] direct `/sales`, `/orders`, `/stock`, `/settings` access redirects to gate when shift is not open
+- [ ] unauthorized roles cannot access hidden menu routes through direct URL
+- [ ] close shift then dashboard shows the open-shift gate again
 - [ ] expired login context
 - [ ] expired/revoked session
 - [ ] unauthorized API access

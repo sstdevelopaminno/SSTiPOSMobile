@@ -2,7 +2,7 @@
 
 export function AuthShell({ children }: { children: React.ReactNode; title: string; subtitle: string }) {
   return (
-    <main className="mobile-shell flex items-center justify-center bg-[#eef3f8] px-3 py-4">
+    <main className="flex min-h-dvh items-center justify-center overflow-y-auto bg-[#eef3f8] px-3 py-4">
       <section className="w-full max-w-[444px] rounded-[18px] border border-[#cfdff2] bg-white px-5 pb-6 pt-16 shadow-sm">
         <div className="mb-10 flex justify-center">
           <Image

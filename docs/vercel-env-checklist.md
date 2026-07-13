@@ -26,8 +26,10 @@ Smoke test after redeploy:
 1. Open `https://sstiposmobile.vercel.app/login/store`.
 2. Enter store code `NDL-TH-001`.
 3. Select branch `NDL-ONNUT-01` if branch selection appears.
-4. Login with employee `sst182536` and PIN `182536`.
-5. Confirm dashboard loads for the selected branch.
+4. Login with employee code `sst182536`.
+5. Select a cashier device.
+6. Confirm the open-shift gate appears if no shift is open for that device.
+7. Open shift and confirm dashboard loads for the selected branch/device.
 ## Security Note
 
 Do not paste Vercel tokens or secret values into repository files, chat logs, screenshots, or generated documentation.

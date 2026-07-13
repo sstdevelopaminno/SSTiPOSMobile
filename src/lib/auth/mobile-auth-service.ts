@@ -1,13 +1,21 @@
 ﻿import "server-only";
 
-import bcrypt from "bcryptjs";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createMobileFlow, type MobileLoginFlow } from "@/lib/auth/mobile-flow";
+import { getEnv } from "@/lib/env";
 import type { BranchRole } from "@/types/contracts";
 
 type BranchRow = { id: string; code: string | null; name: string | null; is_active: boolean };
 type TenantRow = { id: string; code: string; name: string; is_active: boolean };
-type UserProfileRow = { id: string; email: string | null; full_name: string | null; pin_hash: string | null; is_active: boolean };
+type UserProfileRow = { id: string; email: string | null; full_name: string | null; is_active: boolean };
+export type BranchDeviceRow = {
+  id: string;
+  device_code: string | null;
+  device_name: string | null;
+  device_type: string | null;
+  status: string | null;
+  is_locked: boolean | null;
+};
 
 type UserRoleRow = {
   user_id: string;
@@ -51,6 +59,15 @@ function roleToPermissions(role: BranchRole) {
   return ["pos.sales.access", "pos.shift.open"];
 }
 
+function isDeviceSelectable(device: BranchDeviceRow) {
+  const status = String(device.status ?? "active").toLowerCase();
+  return device.is_locked !== true && !["disabled", "inactive", "locked", "maintenance"].includes(status);
+}
+
+function loginContextExpiresAt() {
+  return new Date(Date.now() + getEnv().MOBILE_LOGIN_CONTEXT_TTL_MINUTES * 60 * 1000).toISOString();
+}
+
 async function loadEmployeeCodes(tenantId: string, userIds: string[]) {
   const supabase = createServiceClient();
   const map = new Map<string, string>();
@@ -77,7 +94,8 @@ export async function verifyStoreCode(storeCode: string) {
     .order("name", { ascending: true });
   if (branchError) throw new Error(branchError.message);
 
-  const branchRows = (branches ?? []) as BranchRow[];
+  const branchRows = ((branches ?? []) as BranchRow[]).filter((branch) => Boolean(branch.id));
+  if (branchRows.length === 0) return null;
   let contextId = "";
   if (branchRows.length === 1) {
     const { data: context, error: contextError } = await supabase
@@ -87,7 +105,7 @@ export async function verifyStoreCode(storeCode: string) {
         branch_id: branchRows[0].id,
         store_code: tenant.code,
         status: "active",
-        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        expires_at: loginContextExpiresAt(),
         metadata: { source_app: "mobile_web" }
       })
       .select("id")
@@ -133,7 +151,7 @@ export async function selectBranch(flow: MobileLoginFlow, branchId: string) {
         branch_id: branch.id,
         store_code: flow.tenantCode,
         status: "active",
-        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        expires_at: loginContextExpiresAt(),
         metadata: { source_app: "mobile_web" }
       })
       .select("id")
@@ -144,14 +162,14 @@ export async function selectBranch(flow: MobileLoginFlow, branchId: string) {
   return createMobileFlow({ ...flow, stage: "branch_selected", contextId, branchId: branch.id, branchCode: branch.code, branchName: branch.name });
 }
 
-export async function verifyEmployeeAndCreateSession(flow: MobileLoginFlow, employeeCode: string, pin: string) {
+export async function verifyEmployeeCode(flow: MobileLoginFlow, employeeCode: string) {
   if (!flow.branchId || flow.stage !== "branch_selected") return null;
   const supabase = createServiceClient();
   const candidates = employeeCandidates(employeeCode);
 
   const { data, error } = await supabase
     .from("user_branch_roles")
-    .select("user_id,role,users_profiles!inner(id,email,full_name,pin_hash,is_active)")
+    .select("user_id,role,users_profiles!inner(id,email,full_name,is_active)")
     .eq("tenant_id", flow.tenantId)
     .eq("branch_id", flow.branchId);
   if (error) throw new Error(error.message);
@@ -160,41 +178,32 @@ export async function verifyEmployeeAndCreateSession(flow: MobileLoginFlow, empl
   const codeByUser = await loadEmployeeCodes(flow.tenantId, rows.map((row) => row.user_id));
   for (const row of rows) {
     const profile = Array.isArray(row.users_profiles) ? row.users_profiles[0] : row.users_profiles;
-    if (!profile?.is_active || !profile.pin_hash) continue;
+    if (!profile?.is_active) continue;
     const customCode = codeByUser.get(profile.id) ?? "";
     const derivedCode = deriveEmployeeCode(profile.id);
     const email = normalizeEmployeeCode(profile.email ?? "");
     const emailLocal = email.includes("@") ? email.split("@")[0] : email;
     const matchedCode = candidates.has(customCode) || candidates.has(derivedCode) || candidates.has(normalizeDigits(customCode).slice(-6)) || candidates.has(normalizeDigits(derivedCode).slice(-6)) || candidates.has(email) || candidates.has(emailLocal);
     if (!matchedCode) continue;
-    const pinOk = await bcrypt.compare(pin, profile.pin_hash);
-    if (!pinOk) return null;
 
-    const nowIso = new Date().toISOString();
-    await supabase.from("pos_sessions").update({ status: "revoked", revoked_at: nowIso }).eq("tenant_id", flow.tenantId).eq("branch_id", flow.branchId).eq("user_id", profile.id).eq("status", "active");
-
-    const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
-    const { data: session, error: sessionError } = await supabase
-      .from("pos_sessions")
-      .insert({
-        tenant_id: flow.tenantId,
-        branch_id: flow.branchId,
-        user_id: profile.id,
-        role: row.role,
-        login_context_id: flow.contextId,
-        login_method: "pin",
-        status: "active",
-        expires_at: expiresAt,
-        metadata: { source_app: "mobile_web", employee_code: customCode || derivedCode }
-      })
-      .select("id")
-      .single<{ id: string }>();
-    if (sessionError || !session) throw new Error(sessionError?.message ?? "session_create_failed");
-
-    await supabase.from("pos_login_contexts").update({ status: "consumed", consumed_at: nowIso }).eq("id", flow.contextId).eq("tenant_id", flow.tenantId);
+    const matchedEmployeeCode = customCode || derivedCode;
+    const nextFlow = createMobileFlow({
+      stage: "employee_verified",
+      contextId: flow.contextId,
+      tenantId: flow.tenantId,
+      tenantCode: flow.tenantCode,
+      tenantName: flow.tenantName,
+      branchId: flow.branchId,
+      branchCode: flow.branchCode,
+      branchName: flow.branchName,
+      userId: profile.id,
+      employeeCode: matchedEmployeeCode,
+      employeeName: profile.full_name ?? matchedEmployeeCode,
+      role: row.role
+    });
 
     return {
-      sessionId: session.id,
+      flow: nextFlow,
       user: { id: profile.id, name: profile.full_name ?? (customCode || derivedCode) },
       role: row.role,
       permissions: roleToPermissions(row.role)
@@ -202,6 +211,80 @@ export async function verifyEmployeeAndCreateSession(flow: MobileLoginFlow, empl
   }
 
   return null;
+}
+
+export async function listBranchDevices(flow: MobileLoginFlow) {
+  if (!flow.branchId) return [];
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("branch_devices")
+    .select("id,device_code,device_name,device_type,status,is_locked")
+    .eq("tenant_id", flow.tenantId)
+    .eq("branch_id", flow.branchId)
+    .order("device_name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as BranchDeviceRow[]).filter(isDeviceSelectable);
+}
+
+export async function selectDeviceAndCreateSession(flow: MobileLoginFlow, deviceId: string) {
+  if (!flow.branchId || !flow.userId || !flow.role || flow.stage !== "employee_verified") return null;
+  const devices = await listBranchDevices(flow);
+  const device = devices.find((item) => item.id === deviceId);
+  if (!device?.device_code) return null;
+
+  const supabase = createServiceClient();
+  const nowIso = new Date().toISOString();
+  await supabase
+    .from("pos_sessions")
+    .update({ status: "revoked", revoked_at: nowIso })
+    .eq("tenant_id", flow.tenantId)
+    .eq("branch_id", flow.branchId)
+    .eq("user_id", flow.userId)
+    .eq("status", "active");
+
+  const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
+  const { data: session, error: sessionError } = await supabase
+    .from("pos_sessions")
+    .insert({
+      tenant_id: flow.tenantId,
+      branch_id: flow.branchId,
+      device_id: device.id,
+      device_code: device.device_code,
+      user_id: flow.userId,
+      role: flow.role,
+      login_context_id: flow.contextId,
+      login_method: "employee_code",
+      status: "active",
+      expires_at: expiresAt,
+      metadata: {
+        source_app: "mobile_web",
+        employee_code: flow.employeeCode,
+        device_name: device.device_name
+      }
+    })
+    .select("id")
+    .single<{ id: string }>();
+  if (sessionError || !session) throw new Error(sessionError?.message ?? "session_create_failed");
+
+  if (flow.contextId) {
+    await supabase
+      .from("pos_login_contexts")
+      .update({ status: "consumed", consumed_at: nowIso })
+      .eq("id", flow.contextId)
+      .eq("tenant_id", flow.tenantId);
+  }
+
+  return {
+    sessionId: session.id,
+    user: { id: flow.userId, name: flow.employeeName ?? flow.employeeCode ?? flow.userId },
+    role: flow.role,
+    permissions: roleToPermissions(flow.role),
+    device: {
+      id: device.id,
+      code: device.device_code,
+      name: device.device_name
+    }
+  };
 }
 
 

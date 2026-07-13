@@ -21,9 +21,9 @@ pnpm build
 ```
 
 ## Authentication Flow
-`/login/store -> /login/branch -> /login/employee -> /dashboard`
+`/login/store -> /login/branch -> /login/employee -> /login/device -> /dashboard`
 
-The server resolves tenant, branch, user, role, session and feature state from the shared SSTiPOS Supabase database. Client-submitted scope is never trusted.
+The server resolves tenant, branch, user, role, cashier device, POS session, shift and feature state from the shared SSTiPOS Supabase database. Client-submitted scope is never trusted. Dashboard access now requires a selected cashier device and an open shift for that device.
 
 ## Deployment
 Production alias: `https://sstiposmobile.vercel.app`
@@ -37,4 +37,4 @@ Before production login tests on Vercel, set the required Supabase and mobile se
 ## Smoke Test Account
 Use the shared SSTiPOS dev/production database test path after env is configured:
 
-`NDL-TH-001 -> NDL-ONNUT-01 -> sst182536 / 182536`
+`NDL-TH-001 -> NDL-ONNUT-01 -> sst182536 -> cashier device -> open shift`
