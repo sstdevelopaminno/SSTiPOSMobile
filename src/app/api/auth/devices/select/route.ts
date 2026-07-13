@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const result = await selectDeviceAndCreateSession(flow, body.data.deviceId);
     if (!result || !flow.branchId) return fail("device_not_available", "เครื่องแคชเชียร์ไม่พร้อมใช้งาน", 409);
 
-    const response = ok({ user: result.user, role: result.role, device: result.device, redirectTo: "/dashboard" });
+    const response = ok({ user: result.user, role: result.role, device: result.device, redirectTo: "/shifts" });
     await setMobileSessionCookie({
       tenantId: flow.tenantId,
       branchId: flow.branchId,

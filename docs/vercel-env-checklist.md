@@ -29,7 +29,7 @@ Smoke test after redeploy:
 4. Login with employee code `sst182536`.
 5. Select a cashier device.
 6. Confirm the open-shift gate appears if no shift is open for that device.
-7. Open shift and confirm dashboard loads for the selected branch/device.
+7. Open shift and confirm the `ขาย` menu loads for the selected branch/device.
 ## Security Note
 
 Do not paste Vercel tokens or secret values into repository files, chat logs, screenshots, or generated documentation.

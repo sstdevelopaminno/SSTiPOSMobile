@@ -14,17 +14,17 @@
 - [ ] device selection shows only unlocked/available cashier devices
 - [ ] locked or inactive cashier device cannot create session
 - [ ] employee login does not skip cashier device selection
-- [ ] dashboard redirects visually to open-shift gate when no shift is open for selected device
+- [ ] cashier device selection redirects to the `ปิดยอด` page when no shift is open
 - [ ] bottom mobile menu is hidden before opening shift
-- [ ] gate button opens the `ปิดยอด` page
+- [ ] `/dashboard` redirects to `ปิดยอด` before opening shift and does not render the old dashboard summary
 - [ ] opening shift requires entering opening cash/change amount
 - [ ] opening cash is saved to `shifts.opening_cash` and `shifts.expected_cash`
 - [ ] opening shift redirects to the `ขาย` menu and does not leave the loading popup stuck
-- [ ] open shift from mobile then dashboard loads normally
+- [ ] open shift from mobile then `ขาย` loads normally
 - [ ] after opening shift, bottom menu appears with `ขาย`, `รายการขาย`, `จัดการสินค้า`, `ปิดยอด`, `ตั้งค่า` according to role
 - [ ] direct `/sales`, `/orders`, `/stock`, `/settings` access redirects to gate when shift is not open
 - [ ] unauthorized roles cannot access hidden menu routes through direct URL
-- [ ] close shift then dashboard shows the open-shift gate again
+- [ ] close shift then `ปิดยอด` shows the open-shift state again
 - [ ] expired login context
 - [ ] expired/revoked session
 - [ ] unauthorized API access

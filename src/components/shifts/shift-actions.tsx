@@ -42,7 +42,7 @@ export function ShiftActions({ hasOpenShift }: { hasOpenShift: boolean }) {
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error?.message ?? "ทำรายการปิดยอดไม่สำเร็จ");
-      const redirectTo = json?.data?.redirectTo ?? (action === "open" ? "/sales" : "/dashboard");
+      const redirectTo = json?.data?.redirectTo ?? (action === "open" ? "/sales" : "/shifts");
       router.push(redirectTo);
     } catch (err) {
       setError(shiftErrorMessage(err));

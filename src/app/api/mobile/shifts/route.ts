@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       .select("id,status,closed_at")
       .single();
     if (error || !data) throw new Error(error?.message ?? "shift_close_failed");
-    return ok({ shift: data, redirectTo: "/dashboard" });
+    return ok({ shift: data, redirectTo: "/shifts" });
   } catch (error) {
     console.error("[mobile.shifts]", error);
     return fail("shift_action_error", "ทำรายการกะไม่สำเร็จ กรุณาลองใหม่", 503);

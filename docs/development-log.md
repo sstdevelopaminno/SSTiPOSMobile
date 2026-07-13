@@ -188,6 +188,13 @@
 ## 2026-07-13 Sales Branding Header
 
 - Removed the `SSTiPOS Mobile` eyebrow from the shared mobile app shell.
+
+## 2026-07-13 Dashboard Entry Removal
+
+- Removed the old dashboard summary screen from the post-login path.
+- Cashier device selection now redirects to `/shifts` so operators open the selected device shift before selling.
+- `/dashboard` is now a compatibility redirect to `/sales` when the device shift is open, or `/shifts` when it is not.
+- Closing a shift redirects back to `/shifts`.
 - Added an optional brand slot to `MobileAppShell` so pages can render product branding without hard-coded shell text.
 - Added CpIPOS logo and wordmark beside the `ขาย` header and kept the notification action on the right.
 - Added a subtle CpIPOS watermark inside the ready-to-sell card background instead of using a large visible logo block.

@@ -8,7 +8,7 @@ pnpm install
 Copy-Item .env.example .env.local
 npm run dev
 ```
-
+![alt text]
 ## Environment
 Use the same Supabase project/database as `SSTiPOS` and `SSTiPOSSupport`. Do not create a second database and do not commit real secrets. Required names are listed in `.env.example` and `docs/vercel-env-checklist.md`.
 
@@ -23,9 +23,9 @@ npm run build
 ```
 
 ## Authentication Flow
-`/login/store -> /login/branch -> /login/employee -> /login/device -> /dashboard`
+`/login/store -> /login/branch -> /login/employee -> /login/device -> /shifts -> /sales`
 
-The server resolves tenant, branch, user, role, cashier device, POS session, shift and feature state from the shared SSTiPOS Supabase database. Client-submitted scope is never trusted. Dashboard access now requires a selected cashier device and an open shift for that device.
+The server resolves tenant, branch, user, role, cashier device, POS session, shift and feature state from the shared SSTiPOS Supabase database. Client-submitted scope is never trusted. After cashier device selection, the operator opens the device shift from `ปิดยอด`; once the shift is open, the app enters the `ขาย` menu. `/dashboard` is kept only as a compatibility redirect to `/sales` or `/shifts`.
 
 ## Deployment
 Production alias: `https://sstiposmobile.vercel.app`

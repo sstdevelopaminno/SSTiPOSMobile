@@ -6,7 +6,7 @@ import type { BranchRole } from "@/types/contracts";
 export async function requireMobileSession(roles?: BranchRole[]) {
   const session = await readMobileSession();
   if (!session) redirect("/login/store");
-  if (roles && !roles.includes(session.role)) redirect("/dashboard?error=unauthorized");
+  if (roles && !roles.includes(session.role)) redirect("/orders?error=unauthorized");
   return session;
 }
 
@@ -22,6 +22,9 @@ export async function requireOpenShift(roles?: BranchRole[]) {
     .eq("status", "open")
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!shift) redirect("/dashboard");
+  if (!shift) {
+    const canOpenShift = scope.role === "owner" || scope.role === "manager" || scope.role === "staff";
+    redirect(canOpenShift ? "/shifts" : "/login/store");
+  }
   return { scope, shift };
 }
