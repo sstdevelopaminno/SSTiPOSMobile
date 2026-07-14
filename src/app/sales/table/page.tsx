@@ -1,15 +1,49 @@
 import { MobileAppShell } from "@/components/layout/mobile-app-shell";
 import { requireOpenShift } from "@/lib/permissions/guard";
+import { createServiceClient } from "@/lib/supabase/server";
+
+function tableTone(status: string | null | undefined) {
+  if (status === "available") return "border-[#cfe2f5] bg-white text-[#0f2745]";
+  if (status === "occupied" || status === "ordering") return "border-[#ffd6a7] bg-[#fff8ed] text-[#9a5b00]";
+  if (status === "pending_payment") return "border-[#bdebd0] bg-[#effdf5] text-[#0f8d46]";
+  return "border-[#e4e7ec] bg-[#f8fafc] text-[#667085]";
+}
+
+function statusLabel(status: string | null | undefined) {
+  if (status === "available") return "ว่าง";
+  if (status === "occupied") return "มีลูกค้า";
+  if (status === "ordering") return "กำลังสั่ง";
+  if (status === "pending_payment") return "รอชำระ";
+  if (status === "reserved") return "จอง";
+  if (status === "disabled") return "ปิดใช้";
+  return status ?? "-";
+}
 
 export default async function TableSalesPage() {
-  const { scope } = await requireOpenShift(["owner", "manager", "staff"]);
+  const { scope } = await requireOpenShift("tables:view");
+  const supabase = createServiceClient();
+  const { data: tables } = await supabase
+    .from("dining_tables")
+    .select("id,table_code,table_name,capacity,status,is_active")
+    .eq("tenant_id", scope.tenantId)
+    .eq("branch_id", scope.branchId)
+    .eq("is_active", true)
+    .order("table_code", { ascending: true })
+    .limit(80);
 
   return (
     <MobileAppShell title="เลือกโต๊ะ" subtitle="เปิดโต๊ะลูกค้า" scope={scope}>
-      <section
-        className="rounded-2xl border border-[#d9e8f7] bg-white p-4 shadow-sm"
-        style={{ border: "1px solid #d9e8f7", borderRadius: 16, background: "#fff", padding: 16, boxShadow: "0 4px 12px rgba(15,39,69,0.06)" }}
-      />
+      <section className="grid grid-cols-2 gap-3">
+        {(tables ?? []).length ? (tables ?? []).map((table) => (
+          <article key={table.id} className={`min-h-[104px] rounded-2xl border p-4 shadow-sm ${tableTone(table.status)}`}>
+            <p className="m-0 text-xs font-semibold opacity-75">โต๊ะ</p>
+            <h2 className="m-0 mt-1 text-xl font-black">{table.table_name ?? table.table_code}</h2>
+            <p className="m-0 mt-2 text-xs font-semibold">ที่นั่ง {table.capacity ?? 0} · {statusLabel(table.status)}</p>
+          </article>
+        )) : (
+          <div className="card col-span-2 p-4 text-sm text-[#587398]">ยังไม่มีผังโต๊ะในสาขานี้</div>
+        )}
+      </section>
     </MobileAppShell>
   );
 }

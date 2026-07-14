@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { readMobileSession } from "@/lib/auth/session";
+import { roleCan } from "@/lib/permissions/mobile-features";
 import { createServiceClient } from "@/lib/supabase/server";
-import type { BranchRole } from "@/types/contracts";
+import type { BranchRole, MobilePermissionKey } from "@/types/contracts";
 
 export async function requireMobileSession(roles?: BranchRole[]) {
   const session = await readMobileSession();
@@ -10,8 +11,14 @@ export async function requireMobileSession(roles?: BranchRole[]) {
   return session;
 }
 
-export async function requireOpenShift(roles?: BranchRole[]) {
-  const scope = await requireMobileSession(roles);
+export async function requireMobilePermission(permission: MobilePermissionKey) {
+  const session = await requireMobileSession();
+  if (!roleCan(session.role, permission)) redirect("/orders?error=unauthorized");
+  return session;
+}
+
+export async function requireOpenShift(rolesOrPermission?: BranchRole[] | MobilePermissionKey) {
+  const scope = Array.isArray(rolesOrPermission) ? await requireMobileSession(rolesOrPermission) : rolesOrPermission ? await requireMobilePermission(rolesOrPermission) : await requireMobileSession();
   const supabase = createServiceClient();
   const { data: shift, error } = await supabase
     .from("shifts")

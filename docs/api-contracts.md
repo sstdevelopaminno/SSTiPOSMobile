@@ -11,6 +11,7 @@ Implemented endpoints:
 - `/dashboard` is page-level compatibility routing only; mobile app entry after login is `/shifts` until an open shift redirects the operator to `/sales`.
 - `POST /api/mobile/shifts` with `{ action: "open", openingCash }` or `{ action: "close" }`
 - `GET /api/mobile/dashboard`
+- `GET /api/mobile/features` returns the current mobile role permissions, package feature flags, and menu lock metadata.
 - `POST /api/mobile/sales/takeaway/hold` stores the current takeaway draft bill as `orders.status = held`.
 - `GET /api/mobile/sales/takeaway/held` lists held takeaway bills and line items for the current tenant/branch scope.
 - `POST /api/mobile/sales/takeaway/held/restore` restores a scoped held takeaway bill into the current device shift as a draft bill.
