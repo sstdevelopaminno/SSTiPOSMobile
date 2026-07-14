@@ -62,6 +62,8 @@ const LABELS = {
   pay: "\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19",
   cash: "\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14",
   transfer: "\u0e40\u0e07\u0e34\u0e19\u0e42\u0e2d\u0e19",
+  payCash: "\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14",
+  payTransfer: "\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19\u0e42\u0e2d\u0e19",
   cashReceived: "\u0e23\u0e31\u0e1a\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14",
   change: "\u0e40\u0e07\u0e34\u0e19\u0e17\u0e2d\u0e19",
   referenceNo: "\u0e40\u0e25\u0e02\u0e2d\u0e49\u0e32\u0e07\u0e2d\u0e34\u0e07",
@@ -142,7 +144,6 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
   const discountAmount = discountMode === "percent" ? Math.min(subtotalAmount, subtotalAmount * Math.min(rawDiscountValue, 100) / 100) : Math.min(subtotalAmount, rawDiscountValue);
   const totalAmount = Math.max(0, subtotalAmount - discountAmount);
   const cashReceivedAmount = Number(cashReceivedInput || 0);
-  const cashChangeAmount = Math.max(0, cashReceivedAmount - totalAmount);
   const pageCount = Math.max(1, Math.ceil(cart.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
   const visibleCart = useMemo(() => cart.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE), [cart, currentPage]);
@@ -313,7 +314,8 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
 
   async function checkout(paymentMethod: "cash" | "transfer") {
     if (!cart.length || paymentSubmitting) return;
-    if (paymentMethod === "cash" && cashReceivedAmount < totalAmount) {
+    const cashReceivedForCheckout = paymentMethod === "cash" ? Math.max(cashReceivedAmount, totalAmount) : undefined;
+    if (paymentMethod === "cash" && Number(cashReceivedForCheckout ?? 0) < totalAmount) {
       setPaymentError("\u0e23\u0e31\u0e1a\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14\u0e19\u0e49\u0e2d\u0e22\u0e01\u0e27\u0e48\u0e32\u0e22\u0e2d\u0e14\u0e23\u0e27\u0e21");
       return;
     }
@@ -326,7 +328,7 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
         body: JSON.stringify({
           orderId: activeOrderId,
           paymentMethod,
-          cashReceived: paymentMethod === "cash" ? cashReceivedAmount : undefined,
+          cashReceived: cashReceivedForCheckout,
           referenceNo: paymentMethod === "transfer" ? transferReference.trim() || null : undefined,
           discountMode,
           discountValue: rawDiscountValue,
@@ -639,30 +641,18 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
                 <X size={17} />
               </button>
             </header>
-            <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
-              <label style={{ display: "grid", gap: 6, color: "#7a8fa8", fontSize: 11, fontWeight: 800 }}>
-                {LABELS.cashReceived}
-                <input value={cashReceivedInput} onChange={(event) => setCashReceivedInput(event.target.value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1").slice(0, 12))} inputMode="decimal" placeholder={`0.00 ${BAHT}`} style={{ minHeight: 44, border: "1px solid #d9e8f7", borderRadius: 12, padding: "0 12px", color: "#0f2745", fontSize: 16, fontWeight: 900, outline: "none" }} />
-              </label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8, borderRadius: 12, background: "#f7fbff", padding: 10 }}>
-                <span style={{ color: "#7a8fa8", fontSize: 11, fontWeight: 800 }}>{LABELS.change}</span>
-                <b style={{ color: cashReceivedAmount >= totalAmount ? "#0f8d46" : "#d62929", fontSize: 13 }}>{money(cashChangeAmount)} {BAHT}</b>
-              </div>
-              <button type="button" onClick={() => checkout("cash")} disabled={Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount} style={{ display: "grid", minHeight: 58, gridTemplateColumns: "42px 1fr", alignItems: "center", gap: 10, border: 0, borderRadius: 15, background: Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount ? "#a8cdf2" : "#1677d9", color: "#fff", padding: "8px 12px", fontSize: 14, fontWeight: 900, textAlign: "left" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
+              <button type="button" onClick={() => checkout("cash")} disabled={Boolean(paymentSubmitting)} style={{ display: "grid", minHeight: 112, alignContent: "center", justifyItems: "center", gap: 10, border: "1px solid #cfe2f5", borderRadius: 15, background: paymentSubmitting ? "#eef4fb" : "#f7fbff", color: "#0f2745", padding: 12, fontSize: 14, fontWeight: 900, textAlign: "center" }}>
                 <span style={{ display: "flex", width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 14, background: "#eaf5ff", color: "#1677d9" }}>
                   <Banknote size={25} />
                 </span>
-                {paymentSubmitting === "cash" ? "..." : LABELS.confirmCash}
+                {paymentSubmitting === "cash" ? "..." : LABELS.payCash}
               </button>
-              <label style={{ display: "grid", gap: 6, color: "#7a8fa8", fontSize: 11, fontWeight: 800 }}>
-                {LABELS.referenceNo}
-                <input value={transferReference} onChange={(event) => setTransferReference(event.target.value.slice(0, 120))} placeholder={LABELS.referenceNo} style={{ minHeight: 44, border: "1px solid #d9e8f7", borderRadius: 12, padding: "0 12px", color: "#0f2745", fontSize: 14, fontWeight: 800, outline: "none" }} />
-              </label>
-              <button type="button" onClick={() => checkout("transfer")} disabled={Boolean(paymentSubmitting)} style={{ display: "grid", minHeight: 58, gridTemplateColumns: "42px 1fr", alignItems: "center", gap: 10, border: "1px solid #cfe2f5", borderRadius: 15, background: paymentSubmitting ? "#eef4fb" : "#f7fbff", color: "#0f2745", padding: "8px 12px", fontSize: 14, fontWeight: 900, textAlign: "left" }}>
+              <button type="button" onClick={() => checkout("transfer")} disabled={Boolean(paymentSubmitting)} style={{ display: "grid", minHeight: 112, alignContent: "center", justifyItems: "center", gap: 10, border: "1px solid #cfe2f5", borderRadius: 15, background: paymentSubmitting ? "#eef4fb" : "#f7fbff", color: "#0f2745", padding: 12, fontSize: 14, fontWeight: 900, textAlign: "center" }}>
                 <span style={{ display: "flex", width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 14, background: "#eaf5ff", color: "#1677d9" }}>
                   <Landmark size={25} />
                 </span>
-                {paymentSubmitting === "transfer" ? "..." : LABELS.confirmTransfer}
+                {paymentSubmitting === "transfer" ? "..." : LABELS.payTransfer}
               </button>
             </div>
             {paymentError ? <p style={{ margin: "10px 0 0", color: "#d62929", fontSize: 12, fontWeight: 800 }}>{paymentError}</p> : null}
