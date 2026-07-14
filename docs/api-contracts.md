@@ -2,7 +2,7 @@
 
 Responses use `{ data, error }`.
 
-Implemented scaffold endpoints:
+Implemented endpoints:
 - `POST /api/auth/store-code/verify`
 - `POST /api/auth/branches/select`
 - `POST /api/auth/employee/verify`
@@ -10,3 +10,8 @@ Implemented scaffold endpoints:
 - `POST /api/auth/session/logout`
 - `/dashboard` is page-level compatibility routing only; mobile app entry after login is `/shifts` until an open shift redirects the operator to `/sales`.
 - `POST /api/mobile/shifts` with `{ action: "open", openingCash }` or `{ action: "close" }`
+- `GET /api/mobile/dashboard`
+- `POST /api/mobile/sales/takeaway/hold` stores the current takeaway draft bill as `orders.status = held`.
+- `GET /api/mobile/sales/takeaway/held` lists held takeaway bills and line items for the current tenant/branch scope.
+- `POST /api/mobile/sales/takeaway/cancel` cancels the scoped takeaway draft bill after owner/manager employee-code confirmation.
+- `POST /api/mobile/sales/takeaway/checkout` closes the scoped takeaway draft bill, writes line items and payment, and marks the order paid.

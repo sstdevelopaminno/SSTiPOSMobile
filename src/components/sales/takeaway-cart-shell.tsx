@@ -59,6 +59,7 @@ const LABELS = {
   pay: "\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19",
   cash: "\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14",
   transfer: "\u0e40\u0e07\u0e34\u0e19\u0e42\u0e2d\u0e19",
+  paymentFailed: "\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08",
   choosePayment: "\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e27\u0e34\u0e18\u0e35\u0e0a\u0e33\u0e23\u0e30",
   discountType: "\u0e23\u0e39\u0e1b\u0e41\u0e1a\u0e1a\u0e2a\u0e48\u0e27\u0e19\u0e25\u0e14",
   percent: "\u0e40\u0e1b\u0e2d\u0e23\u0e4c\u0e40\u0e0b\u0e47\u0e19\u0e15\u0e4c",
@@ -89,6 +90,8 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [discountOpen, setDiscountOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentSubmitting, setPaymentSubmitting] = useState<"cash" | "transfer" | null>(null);
+  const [paymentError, setPaymentError] = useState("");
   const [holdOpen, setHoldOpen] = useState(false);
   const [heldListOpen, setHeldListOpen] = useState(false);
   const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([]);
@@ -233,6 +236,39 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
       setHeldOrders(json?.data?.orders ?? []);
     } finally {
       setHeldLoading(false);
+    }
+  }
+
+  async function checkout(paymentMethod: "cash" | "transfer") {
+    if (!cart.length || paymentSubmitting) return;
+    setPaymentSubmitting(paymentMethod);
+    setPaymentError("");
+    try {
+      const response = await fetch("/api/mobile/sales/takeaway/checkout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          paymentMethod,
+          cashReceived: paymentMethod === "cash" ? totalAmount : undefined,
+          discountMode,
+          discountValue: rawDiscountValue,
+          items: cart.map((item) => ({ productId: item.id, quantity: item.quantity })),
+        }),
+      });
+      const json = await response.json().catch(() => null);
+      if (!response.ok || json?.error) {
+        setPaymentError(json?.error?.message ?? LABELS.paymentFailed);
+        return;
+      }
+      setCart([]);
+      setDiscountInput("");
+      setPage(0);
+      setPaymentOpen(false);
+      router.push(json?.data?.redirectTo ?? "/sales");
+      router.refresh();
+    } finally {
+      setPaymentSubmitting(null);
     }
   }
 
@@ -522,19 +558,20 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
               </button>
             </header>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
-              <button type="button" style={{ display: "grid", minHeight: 112, justifyItems: "center", alignContent: "center", gap: 8, border: "1px solid #cfe2f5", borderRadius: 15, background: "#f7fbff", color: "#0f2745", fontSize: 14, fontWeight: 900 }}>
+              <button type="button" onClick={() => checkout("cash")} disabled={Boolean(paymentSubmitting)} style={{ display: "grid", minHeight: 112, justifyItems: "center", alignContent: "center", gap: 8, border: "1px solid #cfe2f5", borderRadius: 15, background: paymentSubmitting ? "#eef4fb" : "#f7fbff", color: "#0f2745", fontSize: 14, fontWeight: 900 }}>
                 <span style={{ display: "flex", width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 14, background: "#eaf5ff", color: "#1677d9" }}>
                   <Banknote size={25} />
                 </span>
-                {LABELS.cash}
+                {paymentSubmitting === "cash" ? "..." : LABELS.cash}
               </button>
-              <button type="button" style={{ display: "grid", minHeight: 112, justifyItems: "center", alignContent: "center", gap: 8, border: "1px solid #cfe2f5", borderRadius: 15, background: "#f7fbff", color: "#0f2745", fontSize: 14, fontWeight: 900 }}>
+              <button type="button" onClick={() => checkout("transfer")} disabled={Boolean(paymentSubmitting)} style={{ display: "grid", minHeight: 112, justifyItems: "center", alignContent: "center", gap: 8, border: "1px solid #cfe2f5", borderRadius: 15, background: paymentSubmitting ? "#eef4fb" : "#f7fbff", color: "#0f2745", fontSize: 14, fontWeight: 900 }}>
                 <span style={{ display: "flex", width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 14, background: "#eaf5ff", color: "#1677d9" }}>
                   <Landmark size={25} />
                 </span>
-                {LABELS.transfer}
+                {paymentSubmitting === "transfer" ? "..." : LABELS.transfer}
               </button>
             </div>
+            {paymentError ? <p style={{ margin: "10px 0 0", color: "#d62929", fontSize: 12, fontWeight: 800 }}>{paymentError}</p> : null}
           </section>
         </div>
       ) : null}

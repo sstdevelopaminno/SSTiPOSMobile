@@ -33,7 +33,7 @@ Production alias: `https://sstiposmobile.vercel.app`
 Before production login tests on Vercel, set the required Supabase and mobile session env vars in Vercel Project Settings. See `docs/vercel-env-checklist.md`.
 
 ## Known Limitations
-- Sales write flow is not implemented in Phase 1.
+- Sales write flow currently covers takeaway draft bills, held bills, cancellation, and cash/transfer checkout. Table and delivery sales remain placeholder entry points.
 - Vercel runtime database login requires production env vars to be configured in Vercel Dashboard.
 
 ## Smoke Test Account
