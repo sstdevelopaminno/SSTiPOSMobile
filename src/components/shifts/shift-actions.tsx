@@ -7,7 +7,10 @@ import { useState } from "react";
 
 function shiftErrorMessage(error: unknown) {
   if (error instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(error.message)) {
-    return "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจว่า npm run dev ยังเปิดอยู่ แล้วลองใหม่";
+    const isLocal = typeof window !== "undefined" && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+    return isLocal
+      ? "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจว่า npm run dev ยังเปิดอยู่ แล้วลองใหม่"
+      : "เชื่อมต่อ API ไม่ได้ กรุณาตรวจอินเทอร์เน็ตแล้วลองใหม่";
   }
   return error instanceof Error ? error.message : "ทำรายการปิดยอดไม่สำเร็จ";
 }
@@ -16,18 +19,30 @@ function normalizeCashInput(value: string) {
   return value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1").slice(0, 12);
 }
 
-export function ShiftActions({ hasOpenShift }: { hasOpenShift: boolean }) {
+function money(value: number) {
+  return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export function ShiftActions({ hasOpenShift, expectedCash = 0 }: { hasOpenShift: boolean; expectedCash?: number }) {
   const router = useRouter();
   const [openingCash, setOpeningCash] = useState("");
+  const [closingCash, setClosingCash] = useState("");
   const [loadingAction, setLoadingAction] = useState<"open" | "close" | null>(null);
   const [error, setError] = useState("");
   const loading = loadingAction !== null;
   const openingCashValue = openingCash.trim() === "" ? null : Number(openingCash);
+  const closingCashValue = closingCash.trim() === "" ? null : Number(closingCash);
   const canOpen = openingCashValue !== null && Number.isFinite(openingCashValue) && openingCashValue >= 0 && !loading;
+  const canClose = closingCashValue !== null && Number.isFinite(closingCashValue) && closingCashValue >= 0 && !loading;
+  const closeDiff = closingCashValue === null || !Number.isFinite(closingCashValue) ? 0 : closingCashValue - expectedCash;
 
   async function submit(action: "open" | "close") {
     if (action === "open" && !canOpen) {
-      setError("กรุณากรอกจำนวนเงินทอนเริ่มต้น");
+      setError("กรุณากรอกเงินทอนเริ่มต้น");
+      return;
+    }
+    if (action === "close" && !canClose) {
+      setError("กรุณากรอกเงินสดปิดกะ");
       return;
     }
     setLoadingAction(action);
@@ -35,10 +50,14 @@ export function ShiftActions({ hasOpenShift }: { hasOpenShift: boolean }) {
     try {
       const res = await fetch("/api/mobile/shifts", {
         method: "POST",
-        headers: { "Accept": "application/json", "Content-Type": "application/json" },
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
         cache: "no-store",
         credentials: "same-origin",
-        body: JSON.stringify({ action, openingCash: action === "open" ? openingCashValue : undefined })
+        body: JSON.stringify({
+          action,
+          openingCash: action === "open" ? openingCashValue : undefined,
+          closingCash: action === "close" ? closingCashValue : undefined,
+        }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error?.message ?? "ทำรายการปิดยอดไม่สำเร็จ");
@@ -54,9 +73,35 @@ export function ShiftActions({ hasOpenShift }: { hasOpenShift: boolean }) {
     <>
       <div className="space-y-3">
         {hasOpenShift ? (
-          <button type="button" className="w-full rounded-xl border border-[#bcd5f5] bg-white px-4 py-3 text-sm font-semibold text-[#17416f] disabled:opacity-60" disabled={loading} onClick={() => submit("close")}>
-            {loadingAction === "close" ? "กำลังปิดยอด..." : "ปิดยอด"}
-          </button>
+          <div className="space-y-3">
+            <label className="block space-y-2">
+              <span className="flex items-center gap-2 text-sm font-semibold text-[#0f2745]">
+                <Banknote className="h-4 w-4 text-[#1677d9]" />
+                เงินสดปิดกะ
+              </span>
+              <input
+                className="h-12 w-full rounded-xl border border-[#c9dbf2] bg-white px-4 text-base font-semibold text-[#0f2745] outline-none focus:border-[#1677ff] focus:ring-2 focus:ring-[#d8eaff]"
+                value={closingCash}
+                onChange={(event) => setClosingCash(normalizeCashInput(event.target.value))}
+                placeholder="0.00"
+                inputMode="decimal"
+                disabled={loading}
+              />
+            </label>
+            <div className="rounded-xl bg-[#f7fbff] p-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-semibold text-[#587398]">เงินสดคาดหวัง</span>
+                <b className="text-[#0f2745]">{money(expectedCash)} ฿</b>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <span className="font-semibold text-[#587398]">ส่วนต่าง</span>
+                <b className={closeDiff === 0 ? "text-[#0f8d46]" : "text-[#d97706]"}>{money(closeDiff)} ฿</b>
+              </div>
+            </div>
+            <button type="button" className="w-full rounded-xl border border-[#bcd5f5] bg-white px-4 py-3 text-sm font-semibold text-[#17416f] disabled:opacity-60" disabled={!canClose} onClick={() => submit("close")}>
+              {loadingAction === "close" ? "กำลังปิดยอด..." : "ปิดยอด"}
+            </button>
+          </div>
         ) : (
           <div className="space-y-3">
             <label className="block space-y-2">

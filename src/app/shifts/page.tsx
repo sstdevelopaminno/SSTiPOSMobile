@@ -2,15 +2,53 @@ import { MobileAppShell } from "@/components/layout/mobile-app-shell";
 import { ShiftActions } from "@/components/shifts/shift-actions";
 import { requireMobileSession } from "@/lib/permissions/guard";
 import { createServiceClient } from "@/lib/supabase/server";
-import { Clock, Monitor, Store } from "lucide-react";
+import { Banknote, Clock, Landmark, Monitor, Store } from "lucide-react";
+
+function money(value: number | null | undefined) {
+  return Number(value ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 export default async function ShiftsPage() {
   const scope = await requireMobileSession(["owner", "manager", "staff"]);
   const supabase = createServiceClient();
   const [{ data: branch }, { data: shift }] = await Promise.all([
     supabase.from("branches").select("name,code").eq("id", scope.branchId).maybeSingle(),
-    supabase.from("shifts").select("id,status,opened_at,closed_at,device_code").eq("tenant_id", scope.tenantId).eq("branch_id", scope.branchId).eq("device_code", scope.deviceCode).eq("status", "open").maybeSingle()
+    supabase
+      .from("shifts")
+      .select("id,status,opened_at,closed_at,device_code,opening_cash,expected_cash")
+      .eq("tenant_id", scope.tenantId)
+      .eq("branch_id", scope.branchId)
+      .eq("device_code", scope.deviceCode)
+      .eq("status", "open")
+      .maybeSingle<{ id: string; status: string; opened_at: string | null; closed_at: string | null; device_code: string | null; opening_cash: number | null; expected_cash: number | null }>(),
   ]);
+
+  let cashTotal = 0;
+  let transferTotal = 0;
+  let orderCount = 0;
+  if (shift?.id) {
+    const [{ data: orders }, { data: payments }] = await Promise.all([
+      supabase
+        .from("orders")
+        .select("id,status")
+        .eq("tenant_id", scope.tenantId)
+        .eq("branch_id", scope.branchId)
+        .eq("shift_id", shift.id),
+      supabase
+        .from("payments")
+        .select("method,amount")
+        .eq("tenant_id", scope.tenantId)
+        .eq("branch_id", scope.branchId)
+        .eq("shift_id", shift.id)
+        .eq("status", "completed"),
+    ]);
+    orderCount = (orders ?? []).filter((order) => order.status !== "cancelled").length;
+    for (const payment of payments ?? []) {
+      if (payment.method === "cash") cashTotal += Number(payment.amount ?? 0);
+      if (payment.method === "bank_transfer") transferTotal += Number(payment.amount ?? 0);
+    }
+  }
+  const expectedCash = Number(shift?.opening_cash ?? 0) + cashTotal;
 
   return (
     <MobileAppShell title="ปิดยอด" scope={scope} showBottomNav={Boolean(shift)}>
@@ -40,7 +78,29 @@ export default async function ShiftsPage() {
             </p>
           </div>
         </div>
-        <ShiftActions hasOpenShift={Boolean(shift)} />
+
+        {shift ? (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="card p-3">
+              <p className="flex items-center gap-2 text-xs font-semibold text-[#587398]"><Banknote className="h-4 w-4 text-[#1677d9]" /> เงินสดในกะ</p>
+              <b className="mt-2 block text-lg text-[#0f2745]">{money(cashTotal)} ฿</b>
+            </div>
+            <div className="card p-3">
+              <p className="flex items-center gap-2 text-xs font-semibold text-[#587398]"><Landmark className="h-4 w-4 text-[#1677d9]" /> เงินโอน</p>
+              <b className="mt-2 block text-lg text-[#0f2745]">{money(transferTotal)} ฿</b>
+            </div>
+            <div className="card p-3">
+              <p className="text-xs font-semibold text-[#587398]">เงินสดคาดหวัง</p>
+              <b className="mt-2 block text-lg text-[#0f2745]">{money(expectedCash)} ฿</b>
+            </div>
+            <div className="card p-3">
+              <p className="text-xs font-semibold text-[#587398]">บิลในกะ</p>
+              <b className="mt-2 block text-lg text-[#0f2745]">{orderCount}</b>
+            </div>
+          </div>
+        ) : null}
+
+        <ShiftActions hasOpenShift={Boolean(shift)} expectedCash={expectedCash} />
       </section>
     </MobileAppShell>
   );

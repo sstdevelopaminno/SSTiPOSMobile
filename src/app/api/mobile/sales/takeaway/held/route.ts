@@ -14,6 +14,7 @@ type HeldOrderRow = {
 
 type HeldItemRow = {
   order_id: string;
+  product_id: string | null;
   name: string | null;
   quantity: number | null;
   unit_price: number | null;
@@ -44,7 +45,7 @@ export async function GET() {
     if (orderIds.length) {
       const { data: itemRows, error: itemError } = await supabase
         .from("order_items")
-        .select("order_id,name,quantity,unit_price,line_total")
+        .select("order_id,product_id,name,quantity,unit_price,line_total")
         .eq("tenant_id", scope.tenantId)
         .eq("branch_id", scope.branchId)
         .in("order_id", orderIds);
@@ -68,6 +69,7 @@ export async function GET() {
         updatedAt: order.updated_at ?? order.created_at,
         itemCount: (itemsByOrder.get(order.id) ?? []).reduce((sum, item) => sum + Number(item.quantity ?? 0), 0),
         items: (itemsByOrder.get(order.id) ?? []).map((item) => ({
+          productId: item.product_id,
           name: item.name ?? "-",
           quantity: Number(item.quantity ?? 0),
           unitPrice: Number(item.unit_price ?? 0),

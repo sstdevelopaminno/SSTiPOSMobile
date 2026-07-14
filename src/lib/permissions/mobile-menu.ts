@@ -13,7 +13,7 @@ export const mobileMenuItems: MobileMenuItem[] = [
   { href: "/orders", label: "รายการขาย", icon: ReceiptText, roles: ["owner", "manager", "staff", "accountant"] },
   { href: "/stock", label: "จัดการสินค้า", icon: PackageSearch, roles: ["owner", "manager"] },
   { href: "/shifts", label: "ปิดยอด", icon: BadgeDollarSign, roles: ["owner", "manager", "staff"] },
-  { href: "/settings", label: "ตั้งค่า", icon: Settings, roles: ["owner", "manager"] }
+  { href: "/settings", label: "ตั้งค่า", icon: Settings, roles: ["owner", "manager"] },
 ];
 
 export function getMobileMenuItems(role: BranchRole) {

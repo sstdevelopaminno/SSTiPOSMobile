@@ -59,7 +59,7 @@ export default async function TakeawaySalesPage() {
       .eq("device_code", scope.deviceCode)
       .eq("order_type", "takeaway")
       .eq("status", "draft")
-      .order("created_at", { ascending: false })
+      .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle<DraftOrderRow>(),
   ]);

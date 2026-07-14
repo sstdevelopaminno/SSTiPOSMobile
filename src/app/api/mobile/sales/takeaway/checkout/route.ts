@@ -27,11 +27,11 @@ export async function POST(request: Request) {
 
   try {
     const scope = await readMobileSession();
-    if (!scope) return fail("missing_session", "กรุณาเข้าสู่ระบบ", 401);
-    if (!["owner", "manager", "staff"].includes(scope.role)) return fail("forbidden", "ไม่มีสิทธิ์ขาย", 403);
+    if (!scope) return fail("missing_session", "\u0e01\u0e23\u0e38\u0e13\u0e32\u0e40\u0e02\u0e49\u0e32\u0e2a\u0e39\u0e48\u0e23\u0e30\u0e1a\u0e1a", 401);
+    if (!["owner", "manager", "staff"].includes(scope.role)) return fail("forbidden", "\u0e44\u0e21\u0e48\u0e21\u0e35\u0e2a\u0e34\u0e17\u0e18\u0e34\u0e4c\u0e02\u0e32\u0e22", 403);
 
     const body = checkoutSchema.safeParse(await request.json().catch(() => ({})));
-    if (!body.success) return fail("invalid_input", "ข้อมูลตะกร้าหรือการชำระเงินไม่ถูกต้อง", 422);
+    if (!body.success) return fail("invalid_input", "\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e15\u0e30\u0e01\u0e23\u0e49\u0e32\u0e2b\u0e23\u0e37\u0e2d\u0e01\u0e32\u0e23\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19\u0e44\u0e21\u0e48\u0e16\u0e39\u0e01\u0e15\u0e49\u0e2d\u0e07", 422);
     orderId = body.data.orderId;
 
     const supabase = createServiceClient();
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       .eq("status", "open")
       .maybeSingle<{ id: string }>();
     if (shiftError) throw new Error(shiftError.message);
-    if (!shift) return fail("shift_not_open", "ยังไม่มีกะที่เปิดอยู่", 409);
+    if (!shift) return fail("shift_not_open", "\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e01\u0e30\u0e17\u0e35\u0e48\u0e40\u0e1b\u0e34\u0e14\u0e2d\u0e22\u0e39\u0e48", 409);
 
     const { data: draftOrder, error: draftError } = await supabase
       .from("orders")
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       .eq("status", "draft")
       .maybeSingle<{ id: string; order_no: string }>();
     if (draftError) throw new Error(draftError.message);
-    if (!draftOrder) return fail("order_not_found", "ไม่พบ draft bill สำหรับชำระเงิน", 404);
+    if (!draftOrder) return fail("order_not_found", "\u0e44\u0e21\u0e48\u0e1e\u0e1a draft bill \u0e2a\u0e33\u0e2b\u0e23\u0e31\u0e1a\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19", 404);
 
     const requestedItems = body.data.items;
     const productIds = requestedItems.map((item) => item.productId);
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     if (productError) throw new Error(productError.message);
 
     const productById = new Map(((products ?? []) as ProductRow[]).map((product) => [product.id, product]));
-    if (productById.size !== new Set(productIds).size) return fail("product_not_available", "มีสินค้าบางรายการไม่พร้อมขาย", 409);
+    if (productById.size !== new Set(productIds).size) return fail("product_not_available", "\u0e21\u0e35\u0e2a\u0e34\u0e19\u0e04\u0e49\u0e32\u0e1a\u0e32\u0e07\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e44\u0e21\u0e48\u0e1e\u0e23\u0e49\u0e2d\u0e21\u0e02\u0e32\u0e22", 409);
 
     const lines = requestedItems.map((item) => {
       const product = productById.get(item.productId);
@@ -95,10 +95,11 @@ export async function POST(request: Request) {
       : Math.min(subtotal, rawDiscount);
     const total = Math.max(0, subtotal - discountAmount);
     const cashReceived = body.data.paymentMethod === "cash" ? Number(body.data.cashReceived ?? 0) : total;
-    if (body.data.paymentMethod === "cash" && cashReceived < total) return fail("cash_not_enough", "รับเงินสดน้อยกว่ายอดรวม", 422);
+    if (body.data.paymentMethod === "cash" && cashReceived < total) return fail("cash_not_enough", "\u0e23\u0e31\u0e1a\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14\u0e19\u0e49\u0e2d\u0e22\u0e01\u0e27\u0e48\u0e32\u0e22\u0e2d\u0e14\u0e23\u0e27\u0e21", 422);
 
     const nowIso = new Date().toISOString();
     const requestId = crypto.randomUUID();
+    const dbPaymentMethod = body.data.paymentMethod === "transfer" ? "bank_transfer" : "cash";
 
     const { error: deleteError } = await supabase
       .from("order_items")
@@ -138,7 +139,7 @@ export async function POST(request: Request) {
         metadata: {
           source_app: "mobile_web",
           mode: "takeaway",
-          payment_method: body.data.paymentMethod,
+          payment_method: dbPaymentMethod,
           discount_mode: body.data.discountMode ?? "amount",
           discount_value: rawDiscount,
         },
@@ -153,7 +154,7 @@ export async function POST(request: Request) {
       tenant_id: scope.tenantId,
       branch_id: scope.branchId,
       order_id: draftOrder.id,
-      method: body.data.paymentMethod,
+      method: dbPaymentMethod,
       amount: total,
       reference_no: body.data.paymentMethod === "transfer" ? body.data.referenceNo ?? null : null,
       received_by: scope.userId,
@@ -187,6 +188,6 @@ export async function POST(request: Request) {
     if (orderId) {
       await createServiceClient().from("orders").update({ status: "error", updated_at: new Date().toISOString() }).eq("id", orderId);
     }
-    return fail("checkout_failed", "บันทึกออเดอร์ไม่สำเร็จ กรุณาลองใหม่", 503);
+    return fail("checkout_failed", "\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e2d\u0e2d\u0e40\u0e14\u0e2d\u0e23\u0e4c\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08 \u0e01\u0e23\u0e38\u0e13\u0e32\u0e25\u0e2d\u0e07\u0e43\u0e2b\u0e21\u0e48", 503);
   }
 }

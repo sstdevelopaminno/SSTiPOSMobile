@@ -32,6 +32,7 @@ type HeldOrder = {
   itemCount: number;
   updatedAt: string | null;
   items: Array<{
+    productId: string | null;
     name: string;
     quantity: number;
     unitPrice: number;
@@ -56,9 +57,16 @@ const LABELS = {
   holdBill: "\u0e1e\u0e31\u0e01\u0e1a\u0e34\u0e25",
   heldOrders: "\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e1e\u0e31\u0e01",
   noHeldOrders: "\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e1a\u0e34\u0e25\u0e17\u0e35\u0e48\u0e1e\u0e31\u0e01",
+  restoreHeld: "\u0e40\u0e23\u0e35\u0e22\u0e01\u0e01\u0e25\u0e31\u0e1a",
+  restoreHeldFailed: "\u0e40\u0e23\u0e35\u0e22\u0e01\u0e1a\u0e34\u0e25\u0e1e\u0e31\u0e01\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08",
   pay: "\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19",
   cash: "\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14",
   transfer: "\u0e40\u0e07\u0e34\u0e19\u0e42\u0e2d\u0e19",
+  cashReceived: "\u0e23\u0e31\u0e1a\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14",
+  change: "\u0e40\u0e07\u0e34\u0e19\u0e17\u0e2d\u0e19",
+  referenceNo: "\u0e40\u0e25\u0e02\u0e2d\u0e49\u0e32\u0e07\u0e2d\u0e34\u0e07",
+  confirmCash: "\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14",
+  confirmTransfer: "\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e40\u0e07\u0e34\u0e19\u0e42\u0e2d\u0e19",
   paymentFailed: "\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08",
   choosePayment: "\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e27\u0e34\u0e18\u0e35\u0e0a\u0e33\u0e23\u0e30",
   discountType: "\u0e23\u0e39\u0e1b\u0e41\u0e1a\u0e1a\u0e2a\u0e48\u0e27\u0e19\u0e25\u0e14",
@@ -85,6 +93,8 @@ function money(value: number) {
 
 export function TakeawayCartShell({ categories, products, orderId, orderNo }: { categories: TakeawayCategory[]; products: TakeawayProduct[]; orderId: string; orderNo: string }) {
   const router = useRouter();
+  const [activeOrderId, setActiveOrderId] = useState(orderId);
+  const [activeOrderNo, setActiveOrderNo] = useState(orderNo);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [page, setPage] = useState(0);
   const [productPickerOpen, setProductPickerOpen] = useState(false);
@@ -92,10 +102,13 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentSubmitting, setPaymentSubmitting] = useState<"cash" | "transfer" | null>(null);
   const [paymentError, setPaymentError] = useState("");
+  const [cashReceivedInput, setCashReceivedInput] = useState("");
+  const [transferReference, setTransferReference] = useState("");
   const [holdOpen, setHoldOpen] = useState(false);
   const [heldListOpen, setHeldListOpen] = useState(false);
   const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([]);
   const [heldLoading, setHeldLoading] = useState(false);
+  const [restoringHeldId, setRestoringHeldId] = useState<string | null>(null);
   const [holdSubmitting, setHoldSubmitting] = useState(false);
   const [heldError, setHeldError] = useState("");
   const [discountMode, setDiscountMode] = useState<"percent" | "amount">("percent");
@@ -107,6 +120,11 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
   const [activeCategory, setActiveCategory] = useState(categories[0]?.name ?? LABELS.all);
   const categoryScrollerRef = useRef<HTMLDivElement>(null);
   const addedNoticeTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setActiveOrderId(orderId);
+    setActiveOrderNo(orderNo);
+  }, [orderId, orderNo]);
 
   useEffect(() => {
     return () => {
@@ -123,6 +141,8 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
   const rawDiscountValue = Math.max(0, Number(discountInput || 0));
   const discountAmount = discountMode === "percent" ? Math.min(subtotalAmount, subtotalAmount * Math.min(rawDiscountValue, 100) / 100) : Math.min(subtotalAmount, rawDiscountValue);
   const totalAmount = Math.max(0, subtotalAmount - discountAmount);
+  const cashReceivedAmount = Number(cashReceivedInput || 0);
+  const cashChangeAmount = Math.max(0, cashReceivedAmount - totalAmount);
   const pageCount = Math.max(1, Math.ceil(cart.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
   const visibleCart = useMemo(() => cart.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE), [cart, currentPage]);
@@ -179,7 +199,7 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
       const response = await fetch("/api/mobile/sales/takeaway/cancel", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ orderId, pin: holdPin }),
+        body: JSON.stringify({ orderId: activeOrderId, pin: holdPin }),
       });
       const json = await response.json().catch(() => null);
       if (!response.ok || json?.error) {
@@ -202,7 +222,7 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          orderId,
+          orderId: activeOrderId,
           discountMode,
           discountValue: rawDiscountValue,
           items: cart.map((item) => ({ productId: item.id, quantity: item.quantity })),
@@ -215,7 +235,10 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
       }
       setCart([]);
       setDiscountInput("");
+      setCashReceivedInput("");
+      setTransferReference("");
       setPage(0);
+      await openHeldOrders();
       router.refresh();
     } finally {
       setHoldSubmitting(false);
@@ -239,8 +262,61 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
     }
   }
 
+  async function restoreHeldOrder(order: HeldOrder) {
+    if (restoringHeldId) return;
+    setRestoringHeldId(order.id);
+    setHeldError("");
+    try {
+      const response = await fetch("/api/mobile/sales/takeaway/held/restore", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ orderId: order.id }),
+      });
+      const json = await response.json().catch(() => null);
+      if (!response.ok || json?.error) {
+        setHeldError(json?.error?.message ?? LABELS.restoreHeldFailed);
+        return;
+      }
+
+      const restored = json?.data?.order ?? order;
+      const nextCart = (restored.items ?? order.items)
+        .map((item: HeldOrder["items"][number]) => {
+          const product = item.productId ? products.find((entry) => entry.id === item.productId) : undefined;
+          if (!product && !item.productId) return null;
+          return {
+            id: product?.id ?? String(item.productId),
+            name: product?.name ?? item.name,
+            sku: product?.sku ?? null,
+            category: product?.category ?? LABELS.all,
+            price: Number(item.unitPrice ?? product?.price ?? 0),
+            sellUnit: product?.sellUnit ?? null,
+            quantity: Number(item.quantity ?? 0),
+          };
+        })
+        .filter((item: CartLine | null): item is CartLine => Boolean(item && item.quantity > 0));
+
+      setActiveOrderId(restored.id ?? order.id);
+      setActiveOrderNo(restored.orderNo ?? order.orderNo);
+      setCart(nextCart);
+      setDiscountMode("amount");
+      setDiscountInput(String(Number(restored.discount ?? order.discount ?? 0) || ""));
+      setCashReceivedInput("");
+      setTransferReference("");
+      setPage(0);
+      setHeldOrders((current) => current.filter((entry) => entry.id !== order.id));
+      setHeldListOpen(false);
+      router.refresh();
+    } finally {
+      setRestoringHeldId(null);
+    }
+  }
+
   async function checkout(paymentMethod: "cash" | "transfer") {
     if (!cart.length || paymentSubmitting) return;
+    if (paymentMethod === "cash" && cashReceivedAmount < totalAmount) {
+      setPaymentError("\u0e23\u0e31\u0e1a\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14\u0e19\u0e49\u0e2d\u0e22\u0e01\u0e27\u0e48\u0e32\u0e22\u0e2d\u0e14\u0e23\u0e27\u0e21");
+      return;
+    }
     setPaymentSubmitting(paymentMethod);
     setPaymentError("");
     try {
@@ -248,9 +324,10 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          orderId,
+          orderId: activeOrderId,
           paymentMethod,
-          cashReceived: paymentMethod === "cash" ? totalAmount : undefined,
+          cashReceived: paymentMethod === "cash" ? cashReceivedAmount : undefined,
+          referenceNo: paymentMethod === "transfer" ? transferReference.trim() || null : undefined,
           discountMode,
           discountValue: rawDiscountValue,
           items: cart.map((item) => ({ productId: item.id, quantity: item.quantity })),
@@ -263,6 +340,8 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
       }
       setCart([]);
       setDiscountInput("");
+      setCashReceivedInput("");
+      setTransferReference("");
       setPage(0);
       setPaymentOpen(false);
       router.push(json?.data?.redirectTo ?? "/sales");
@@ -289,7 +368,7 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
           <div style={{ minWidth: 0 }}>
             <p style={{ margin: 0, color: "#7a8fa8", fontSize: 10, fontWeight: 800 }}>{LABELS.billNo}</p>
             <strong style={{ display: "block", marginTop: 2, overflow: "hidden", color: "#0f2745", fontSize: 13, fontWeight: 900, textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {orderNo}
+              {activeOrderNo}
             </strong>
           </div>
           <button type="button" style={{ display: "inline-flex", minHeight: 34, alignItems: "center", justifyContent: "center", border: "1px solid #d9e8f7", borderRadius: 999, background: "#fff", color: "#17416f", padding: "0 10px", fontSize: 12, fontWeight: 900, boxShadow: "0 4px 12px rgba(15,39,69,0.06)" }}>
@@ -537,6 +616,9 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
                         </div>
                       ))}
                     </div>
+                    <button type="button" onClick={() => restoreHeldOrder(order)} disabled={Boolean(restoringHeldId)} style={{ width: "100%", minHeight: 38, marginTop: 10, border: 0, borderRadius: 12, background: "#1677d9", color: "#fff", fontSize: 12, fontWeight: 900 }}>
+                      {restoringHeldId === order.id ? "..." : LABELS.restoreHeld}
+                    </button>
                   </article>
                 ))}
               </div>
@@ -557,18 +639,30 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
                 <X size={17} />
               </button>
             </header>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
-              <button type="button" onClick={() => checkout("cash")} disabled={Boolean(paymentSubmitting)} style={{ display: "grid", minHeight: 112, justifyItems: "center", alignContent: "center", gap: 8, border: "1px solid #cfe2f5", borderRadius: 15, background: paymentSubmitting ? "#eef4fb" : "#f7fbff", color: "#0f2745", fontSize: 14, fontWeight: 900 }}>
+            <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+              <label style={{ display: "grid", gap: 6, color: "#7a8fa8", fontSize: 11, fontWeight: 800 }}>
+                {LABELS.cashReceived}
+                <input value={cashReceivedInput} onChange={(event) => setCashReceivedInput(event.target.value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1").slice(0, 12))} inputMode="decimal" placeholder={`0.00 ${BAHT}`} style={{ minHeight: 44, border: "1px solid #d9e8f7", borderRadius: 12, padding: "0 12px", color: "#0f2745", fontSize: 16, fontWeight: 900, outline: "none" }} />
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8, borderRadius: 12, background: "#f7fbff", padding: 10 }}>
+                <span style={{ color: "#7a8fa8", fontSize: 11, fontWeight: 800 }}>{LABELS.change}</span>
+                <b style={{ color: cashReceivedAmount >= totalAmount ? "#0f8d46" : "#d62929", fontSize: 13 }}>{money(cashChangeAmount)} {BAHT}</b>
+              </div>
+              <button type="button" onClick={() => checkout("cash")} disabled={Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount} style={{ display: "grid", minHeight: 58, gridTemplateColumns: "42px 1fr", alignItems: "center", gap: 10, border: 0, borderRadius: 15, background: Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount ? "#a8cdf2" : "#1677d9", color: "#fff", padding: "8px 12px", fontSize: 14, fontWeight: 900, textAlign: "left" }}>
                 <span style={{ display: "flex", width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 14, background: "#eaf5ff", color: "#1677d9" }}>
                   <Banknote size={25} />
                 </span>
-                {paymentSubmitting === "cash" ? "..." : LABELS.cash}
+                {paymentSubmitting === "cash" ? "..." : LABELS.confirmCash}
               </button>
-              <button type="button" onClick={() => checkout("transfer")} disabled={Boolean(paymentSubmitting)} style={{ display: "grid", minHeight: 112, justifyItems: "center", alignContent: "center", gap: 8, border: "1px solid #cfe2f5", borderRadius: 15, background: paymentSubmitting ? "#eef4fb" : "#f7fbff", color: "#0f2745", fontSize: 14, fontWeight: 900 }}>
+              <label style={{ display: "grid", gap: 6, color: "#7a8fa8", fontSize: 11, fontWeight: 800 }}>
+                {LABELS.referenceNo}
+                <input value={transferReference} onChange={(event) => setTransferReference(event.target.value.slice(0, 120))} placeholder={LABELS.referenceNo} style={{ minHeight: 44, border: "1px solid #d9e8f7", borderRadius: 12, padding: "0 12px", color: "#0f2745", fontSize: 14, fontWeight: 800, outline: "none" }} />
+              </label>
+              <button type="button" onClick={() => checkout("transfer")} disabled={Boolean(paymentSubmitting)} style={{ display: "grid", minHeight: 58, gridTemplateColumns: "42px 1fr", alignItems: "center", gap: 10, border: "1px solid #cfe2f5", borderRadius: 15, background: paymentSubmitting ? "#eef4fb" : "#f7fbff", color: "#0f2745", padding: "8px 12px", fontSize: 14, fontWeight: 900, textAlign: "left" }}>
                 <span style={{ display: "flex", width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 14, background: "#eaf5ff", color: "#1677d9" }}>
                   <Landmark size={25} />
                 </span>
-                {paymentSubmitting === "transfer" ? "..." : LABELS.transfer}
+                {paymentSubmitting === "transfer" ? "..." : LABELS.confirmTransfer}
               </button>
             </div>
             {paymentError ? <p style={{ margin: "10px 0 0", color: "#d62929", fontSize: 12, fontWeight: 800 }}>{paymentError}</p> : null}
@@ -585,7 +679,7 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
                 <X size={17} />
               </button>
             </header>
-            <p style={{ margin: "8px 0 0", color: "#7a8fa8", fontSize: 12, fontWeight: 700 }}>{orderNo}</p>
+            <p style={{ margin: "8px 0 0", color: "#7a8fa8", fontSize: 12, fontWeight: 700 }}>{activeOrderNo}</p>
             <label style={{ display: "grid", gap: 6, marginTop: 12, color: "#7a8fa8", fontSize: 11, fontWeight: 800 }}>
               {LABELS.enterPin}
               <input value={holdPin} onChange={(event) => setHoldPin(event.target.value)} type="password" inputMode="numeric" autoComplete="off" style={{ minHeight: 46, border: "1px solid #ffd7d7", borderRadius: 12, padding: "0 12px", color: "#0f2745", fontSize: 16, fontWeight: 900, outline: "none" }} />
