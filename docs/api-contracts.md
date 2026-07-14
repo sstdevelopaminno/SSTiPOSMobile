@@ -17,3 +17,4 @@ Implemented endpoints:
 - `POST /api/mobile/sales/takeaway/held/restore` restores a scoped held takeaway bill into the current device shift as a draft bill.
 - `POST /api/mobile/sales/takeaway/cancel` cancels the scoped takeaway draft bill after owner/manager employee-code confirmation.
 - `POST /api/mobile/sales/takeaway/checkout` closes the scoped takeaway draft bill, writes line items and payment, and marks the order paid.
+- `GET /api/mobile/payments/qr?amount=120.00` returns the active branch payment QR configuration from `tenant_payment_accounts`, preferring a branch-specific account before an all-branch account, plus INET QR availability from `pos_payment_provider_settings`.

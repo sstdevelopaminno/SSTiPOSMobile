@@ -15,6 +15,8 @@ module.exports = {
           "**/$RECYCLE.BIN/**",
           "E:/System Volume Information/**",
           "E:/$RECYCLE.BIN/**",
+          "E:/**/System Volume Information/**",
+          "E:/**/$RECYCLE.BIN/**",
         ],
       };
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, ChevronLeft, ChevronRight, Landmark, Minus, Percent, Plus, Trash2, X } from "lucide-react";
+import { Banknote, CheckCircle2, ChevronLeft, ChevronRight, Landmark, Minus, Percent, Plus, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -40,6 +40,49 @@ type HeldOrder = {
   }>;
 };
 
+type ReceiptLine = {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+};
+
+type ReceiptSnapshot = {
+  orderNo: string;
+  paymentMethod: "cash" | "transfer";
+  total: number;
+  subtotal: number;
+  discount: number;
+  cashReceived: number | null;
+  change: number;
+  paidAt: string;
+  lines: ReceiptLine[];
+};
+
+export type ReceiptStoreProfile = {
+  displayName: string;
+  logoUrl: string;
+  companyAddress: string;
+  contactPhone: string;
+  branchName: string;
+};
+
+type TransferQrPayload = {
+  manual: {
+    accountId: string;
+    bankName: string;
+    accountName: string;
+    accountNumber: string;
+    promptPayPhone: string;
+    qrMode: "promptpay_link" | "qr_image";
+    qrUrl: string | null;
+  } | null;
+  inet: {
+    enabled: boolean;
+    environment: "production" | "uat" | null;
+  };
+};
+
 const PAGE_SIZE = 5;
 const BAHT = "\u0e3f";
 const LABELS = {
@@ -64,6 +107,34 @@ const LABELS = {
   transfer: "\u0e40\u0e07\u0e34\u0e19\u0e42\u0e2d\u0e19",
   payCash: "\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14",
   payTransfer: "\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19\u0e42\u0e2d\u0e19",
+  cashPaymentTitle: "\u0e23\u0e31\u0e1a\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14",
+  transferPaymentTitle: "\u0e23\u0e31\u0e1a\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19\u0e42\u0e2d\u0e19",
+  receiptTitle: "\u0e43\u0e1a\u0e40\u0e2a\u0e23\u0e47\u0e08 58 mm",
+  amountDue: "\u0e22\u0e2d\u0e14\u0e17\u0e35\u0e48\u0e15\u0e49\u0e2d\u0e07\u0e0a\u0e33\u0e23\u0e30",
+  scanQrToPay: "\u0e2a\u0e41\u0e01\u0e19 QR \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19",
+  manualTransfer: "\u0e42\u0e2d\u0e19\u0e41\u0e1a\u0e1a\u0e40\u0e14\u0e34\u0e21",
+  inetQr: "INET QR",
+  scanWithBankApp: "\u0e2a\u0e41\u0e01\u0e19 QR \u0e14\u0e49\u0e27\u0e22\u0e41\u0e2d\u0e1b\u0e18\u0e19\u0e32\u0e04\u0e32\u0e23\u0e02\u0e2d\u0e07\u0e25\u0e39\u0e01\u0e04\u0e49\u0e32",
+  loadingQr: "\u0e01\u0e33\u0e25\u0e31\u0e07\u0e42\u0e2b\u0e25\u0e14 QR...",
+  qrNotConfigured: "\u0e01\u0e23\u0e38\u0e13\u0e32\u0e15\u0e31\u0e49\u0e07\u0e04\u0e48\u0e32\u0e1e\u0e23\u0e49\u0e2d\u0e21\u0e40\u0e1e\u0e22\u0e4c\u0e2b\u0e23\u0e37\u0e2d\u0e20\u0e32\u0e1e QR \u0e01\u0e48\u0e2d\u0e19",
+  inetQrNotReady: "INET QR \u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e40\u0e1b\u0e34\u0e14\u0e43\u0e0a\u0e49\u0e43\u0e19 Mobile",
+  savingTransfer: "\u0e01\u0e33\u0e25\u0e31\u0e07\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e01\u0e32\u0e23\u0e0a\u0e33\u0e23\u0e30\u0e40\u0e07\u0e34\u0e19...",
+  paidFromCustomer: "\u0e23\u0e31\u0e1a\u0e40\u0e07\u0e34\u0e19\u0e21\u0e32\u0e08\u0e32\u0e01\u0e25\u0e39\u0e01\u0e04\u0e49\u0e32",
+  quickCash: "\u0e1a\u0e25\u0e47\u0e2d\u0e01\u0e40\u0e07\u0e34\u0e19\u0e14\u0e48\u0e27\u0e19",
+  keypad: "\u0e41\u0e1b\u0e49\u0e19\u0e15\u0e31\u0e27\u0e40\u0e25\u0e02",
+  confirmPayment: "\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e0a\u0e33\u0e23\u0e30",
+  printReceipt: "\u0e1e\u0e34\u0e21\u0e1e\u0e4c\u0e43\u0e1a\u0e40\u0e2a\u0e23\u0e47\u0e08",
+  closeWindow: "\u0e1b\u0e34\u0e14\u0e2b\u0e19\u0e49\u0e32\u0e15\u0e48\u0e32\u0e07",
+  storeName: "\u0e23\u0e49\u0e32\u0e19\u0e01\u0e4b\u0e27\u0e22\u0e40\u0e15\u0e35\u0e4b\u0e22\u0e27 NDI",
+  branchName: "\u0e2d\u0e48\u0e2d\u0e19\u0e19\u0e38\u0e0a",
+  seller: "\u0e0a\u0e37\u0e48\u0e2d\u0e1c\u0e39\u0e49\u0e02\u0e32\u0e22",
+  mode: "\u0e42\u0e2b\u0e21\u0e14",
+  date: "\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48",
+  productList: "\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e2a\u0e34\u0e19\u0e04\u0e49\u0e32",
+  quantity: "\u0e08\u0e33\u0e19\u0e27\u0e19",
+  lineTotal: "\u0e23\u0e32\u0e04\u0e32\u0e23\u0e27\u0e21",
+  clear: "\u0e25\u0e49\u0e32\u0e07",
+  delete: "\u0e25\u0e1a",
   cashReceived: "\u0e23\u0e31\u0e1a\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14",
   change: "\u0e40\u0e07\u0e34\u0e19\u0e17\u0e2d\u0e19",
   referenceNo: "\u0e40\u0e25\u0e02\u0e2d\u0e49\u0e32\u0e07\u0e2d\u0e34\u0e07",
@@ -93,7 +164,19 @@ function money(value: number) {
   return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export function TakeawayCartShell({ categories, products, orderId, orderNo }: { categories: TakeawayCategory[]; products: TakeawayProduct[]; orderId: string; orderNo: string }) {
+export function TakeawayCartShell({
+  categories,
+  products,
+  orderId,
+  orderNo,
+  receiptStoreProfile
+}: {
+  categories: TakeawayCategory[];
+  products: TakeawayProduct[];
+  orderId: string;
+  orderNo: string;
+  receiptStoreProfile: ReceiptStoreProfile;
+}) {
   const router = useRouter();
   const [activeOrderId, setActiveOrderId] = useState(orderId);
   const [activeOrderNo, setActiveOrderNo] = useState(orderNo);
@@ -102,10 +185,15 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [discountOpen, setDiscountOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentView, setPaymentView] = useState<"choose" | "cash" | "transfer" | "receipt">("choose");
   const [paymentSubmitting, setPaymentSubmitting] = useState<"cash" | "transfer" | null>(null);
   const [paymentError, setPaymentError] = useState("");
   const [cashReceivedInput, setCashReceivedInput] = useState("");
   const [transferReference, setTransferReference] = useState("");
+  const [transferMode, setTransferMode] = useState<"manual" | "inet_nops">("manual");
+  const [transferQr, setTransferQr] = useState<TransferQrPayload | null>(null);
+  const [transferQrLoading, setTransferQrLoading] = useState(false);
+  const [receipt, setReceipt] = useState<ReceiptSnapshot | null>(null);
   const [holdOpen, setHoldOpen] = useState(false);
   const [heldListOpen, setHeldListOpen] = useState(false);
   const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([]);
@@ -134,6 +222,24 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
     };
   }, []);
 
+  useEffect(() => {
+    if (!paymentOpen || (paymentView !== "transfer" && paymentView !== "cash")) return;
+    const bodyOverflow = document.body.style.overflow;
+    const bodyScrollbarWidth = document.body.style.scrollbarWidth;
+    const htmlOverflow = document.documentElement.style.overflow;
+    const htmlScrollbarWidth = document.documentElement.style.scrollbarWidth;
+    document.body.style.overflow = "hidden";
+    document.body.style.scrollbarWidth = "none";
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.scrollbarWidth = "none";
+    return () => {
+      document.body.style.overflow = bodyOverflow;
+      document.body.style.scrollbarWidth = bodyScrollbarWidth;
+      document.documentElement.style.overflow = htmlOverflow;
+      document.documentElement.style.scrollbarWidth = htmlScrollbarWidth;
+    };
+  }, [paymentOpen, paymentView]);
+
   const visibleProducts = useMemo(() => {
     return products.filter((product) => activeCategory === LABELS.all || product.category === activeCategory);
   }, [activeCategory, products]);
@@ -144,6 +250,7 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
   const discountAmount = discountMode === "percent" ? Math.min(subtotalAmount, subtotalAmount * Math.min(rawDiscountValue, 100) / 100) : Math.min(subtotalAmount, rawDiscountValue);
   const totalAmount = Math.max(0, subtotalAmount - discountAmount);
   const cashReceivedAmount = Number(cashReceivedInput || 0);
+  const cashChangeAmount = Math.max(0, cashReceivedAmount - totalAmount);
   const pageCount = Math.max(1, Math.ceil(cart.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
   const visibleCart = useMemo(() => cart.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE), [cart, currentPage]);
@@ -184,6 +291,66 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
   function clearCart() {
     setCart([]);
     setPage(0);
+  }
+
+  function openPaymentChooser() {
+    if (!cart.length) return;
+    setPaymentOpen(true);
+    setPaymentView("choose");
+    setPaymentError("");
+    setReceipt(null);
+    setCashReceivedInput("");
+    setTransferReference("");
+  }
+
+  function openCashPayment() {
+    setPaymentView("cash");
+    setPaymentError("");
+    setCashReceivedInput(totalAmount.toFixed(2));
+  }
+
+  async function openTransferPayment() {
+    setPaymentView("transfer");
+    setPaymentError("");
+    setTransferMode("manual");
+    setTransferQrLoading(true);
+    setTransferQr(null);
+    try {
+      const response = await fetch(`/api/mobile/payments/qr?amount=${encodeURIComponent(totalAmount.toFixed(2))}`);
+      const json = await response.json().catch(() => null);
+      if (!response.ok || json?.error) {
+        setPaymentError(json?.error?.message ?? LABELS.qrNotConfigured);
+        return;
+      }
+      setTransferQr(json?.data ?? null);
+    } finally {
+      setTransferQrLoading(false);
+    }
+  }
+
+  function appendCashInput(value: string) {
+    setCashReceivedInput((current) => {
+      if (value === "." && current.includes(".")) return current;
+      const next = current === "0" && value !== "." ? value : `${current}${value}`;
+      return next.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1").slice(0, 12);
+    });
+  }
+
+  function deleteCashInput() {
+    setCashReceivedInput((current) => current.slice(0, -1));
+  }
+
+  function closeReceiptWindow() {
+    setPaymentOpen(false);
+    setPaymentView("choose");
+    setReceipt(null);
+    router.push("/sales");
+    router.refresh();
+  }
+
+  function printReceiptAndClose() {
+    window.print();
+    closeReceiptWindow();
   }
 
   function scrollCategories(direction: "left" | "right") {
@@ -319,6 +486,22 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
       setPaymentError("\u0e23\u0e31\u0e1a\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14\u0e19\u0e49\u0e2d\u0e22\u0e01\u0e27\u0e48\u0e32\u0e22\u0e2d\u0e14\u0e23\u0e27\u0e21");
       return;
     }
+    const receiptSnapshot: ReceiptSnapshot = {
+      orderNo: activeOrderNo,
+      paymentMethod,
+      total: totalAmount,
+      subtotal: subtotalAmount,
+      discount: discountAmount,
+      cashReceived: paymentMethod === "cash" ? Number(cashReceivedForCheckout ?? 0) : null,
+      change: paymentMethod === "cash" ? Math.max(0, Number(cashReceivedForCheckout ?? 0) - totalAmount) : 0,
+      paidAt: new Date().toISOString(),
+      lines: cart.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.price,
+        lineTotal: item.quantity * item.price,
+      })),
+    };
     setPaymentSubmitting(paymentMethod);
     setPaymentError("");
     try {
@@ -345,8 +528,8 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
       setCashReceivedInput("");
       setTransferReference("");
       setPage(0);
-      setPaymentOpen(false);
-      router.push(json?.data?.redirectTo ?? "/sales");
+      setReceipt({ ...receiptSnapshot, orderNo: json?.data?.orderNo ?? receiptSnapshot.orderNo, total: Number(json?.data?.total ?? receiptSnapshot.total) });
+      setPaymentView("receipt");
       router.refresh();
     } finally {
       setPaymentSubmitting(null);
@@ -482,7 +665,7 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
           <button type="button" onClick={holdCurrentBill} disabled={!cart.length || holdSubmitting} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", border: "1px solid #ffdca8", borderRadius: 13, background: !cart.length || holdSubmitting ? "#fff4e1" : "#fffaf2", color: !cart.length || holdSubmitting ? "#d6a96f" : "#b65f00", fontSize: 12, fontWeight: 900 }}>
             {holdSubmitting ? "..." : LABELS.holdBill}
           </button>
-          <button type="button" onClick={() => setPaymentOpen(true)} disabled={!cart.length} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", border: 0, borderRadius: 13, background: totalQuantity ? "#1677d9" : "#a8cdf2", color: "#fff", fontSize: 12, fontWeight: 900 }}>
+          <button type="button" onClick={openPaymentChooser} disabled={!cart.length} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", border: 0, borderRadius: 13, background: totalQuantity ? "#1677d9" : "#a8cdf2", color: "#fff", fontSize: 12, fontWeight: 900 }}>
             {LABELS.pay} {money(totalAmount)} {BAHT}
           </button>
         </div>
@@ -630,33 +813,200 @@ export function TakeawayCartShell({ categories, products, orderId, orderNo }: { 
       ) : null}
 
       {paymentOpen ? (
-        <div role="dialog" aria-modal="true" aria-label={LABELS.choosePayment} style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,39,69,0.35)", padding: 16 }}>
-          <section style={{ width: "min(92vw, 390px)", border: "1px solid #d9e8f7", borderRadius: 18, background: "#fff", padding: 14, boxShadow: "0 18px 48px rgba(15,39,69,0.22)" }}>
-            <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-              <div>
-                <h2 style={{ margin: 0, color: "#0f2745", fontSize: 16, fontWeight: 900 }}>{LABELS.choosePayment}</h2>
-                <p style={{ margin: "2px 0 0", color: "#1677d9", fontSize: 14, fontWeight: 900 }}>{money(totalAmount)} {BAHT}</p>
+        <div role="dialog" aria-modal="true" aria-label={paymentView === "receipt" ? LABELS.receiptTitle : LABELS.choosePayment} style={{ position: "fixed", inset: 0, zIndex: 80, overflowY: paymentView === "transfer" || paymentView === "cash" ? "hidden" : "auto", scrollbarWidth: "none", background: paymentView === "choose" ? "rgba(15,39,69,0.35)" : "#fff", padding: paymentView === "choose" ? 10 : paymentView === "cash" ? "10px 8px max(10px, env(safe-area-inset-bottom))" : "14px 8px max(18px, env(safe-area-inset-bottom))" }}>
+          {paymentView === "choose" ? (
+            <section style={{ width: "min(95vw, 430px)", margin: "42dvh auto 0", transform: "translateY(-50%)", border: "1px solid #d9e8f7", borderRadius: 18, background: "#fff", padding: 14, boxShadow: "0 18px 48px rgba(15,39,69,0.22)" }}>
+              <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <div>
+                  <h2 style={{ margin: 0, color: "#0f2745", fontSize: 16, fontWeight: 900 }}>{LABELS.choosePayment}</h2>
+                  <p style={{ margin: "2px 0 0", color: "#1677d9", fontSize: 14, fontWeight: 900 }}>{money(totalAmount)} {BAHT}</p>
+                </div>
+                <button type="button" onClick={() => setPaymentOpen(false)} aria-label={LABELS.close} style={{ display: "flex", width: 38, height: 38, minHeight: 38, alignItems: "center", justifyContent: "center", border: "1px solid #d9e8f7", borderRadius: 999, background: "#fff", color: "#17416f" }}>
+                  <X size={18} />
+                </button>
+              </header>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
+                <button type="button" onClick={openCashPayment} disabled={Boolean(paymentSubmitting)} style={{ display: "grid", minHeight: 112, alignContent: "center", justifyItems: "center", gap: 10, border: "1px solid #cfe2f5", borderRadius: 15, background: "#f7fbff", color: "#0f2745", padding: 12, fontSize: 14, fontWeight: 900, textAlign: "center" }}>
+                  <span style={{ display: "flex", width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 14, background: "#eaf5ff", color: "#1677d9" }}>
+                    <Banknote size={25} />
+                  </span>
+                  {LABELS.payCash}
+                </button>
+                <button type="button" onClick={() => void openTransferPayment()} disabled={Boolean(paymentSubmitting)} style={{ display: "grid", minHeight: 112, alignContent: "center", justifyItems: "center", gap: 10, border: "1px solid #cfe2f5", borderRadius: 15, background: paymentSubmitting ? "#eef4fb" : "#f7fbff", color: "#0f2745", padding: 12, fontSize: 14, fontWeight: 900, textAlign: "center" }}>
+                  <span style={{ display: "flex", width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 14, background: "#eaf5ff", color: "#1677d9" }}>
+                    <Landmark size={25} />
+                  </span>
+                  {LABELS.payTransfer}
+                </button>
               </div>
-              <button type="button" onClick={() => setPaymentOpen(false)} aria-label={LABELS.close} style={{ display: "flex", width: 34, height: 34, minHeight: 34, alignItems: "center", justifyContent: "center", border: "1px solid #d9e8f7", borderRadius: 999, background: "#fff", color: "#17416f" }}>
-                <X size={17} />
-              </button>
-            </header>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
-              <button type="button" onClick={() => checkout("cash")} disabled={Boolean(paymentSubmitting)} style={{ display: "grid", minHeight: 112, alignContent: "center", justifyItems: "center", gap: 10, border: "1px solid #cfe2f5", borderRadius: 15, background: paymentSubmitting ? "#eef4fb" : "#f7fbff", color: "#0f2745", padding: 12, fontSize: 14, fontWeight: 900, textAlign: "center" }}>
-                <span style={{ display: "flex", width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 14, background: "#eaf5ff", color: "#1677d9" }}>
-                  <Banknote size={25} />
-                </span>
-                {paymentSubmitting === "cash" ? "..." : LABELS.payCash}
-              </button>
-              <button type="button" onClick={() => checkout("transfer")} disabled={Boolean(paymentSubmitting)} style={{ display: "grid", minHeight: 112, alignContent: "center", justifyItems: "center", gap: 10, border: "1px solid #cfe2f5", borderRadius: 15, background: paymentSubmitting ? "#eef4fb" : "#f7fbff", color: "#0f2745", padding: 12, fontSize: 14, fontWeight: 900, textAlign: "center" }}>
-                <span style={{ display: "flex", width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 14, background: "#eaf5ff", color: "#1677d9" }}>
-                  <Landmark size={25} />
-                </span>
-                {paymentSubmitting === "transfer" ? "..." : LABELS.payTransfer}
-              </button>
-            </div>
-            {paymentError ? <p style={{ margin: "10px 0 0", color: "#d62929", fontSize: 12, fontWeight: 800 }}>{paymentError}</p> : null}
-          </section>
+              {paymentError ? <p style={{ margin: "10px 0 0", color: "#d62929", fontSize: 12, fontWeight: 800 }}>{paymentError}</p> : null}
+            </section>
+          ) : null}
+
+          {paymentView === "cash" ? (
+            <section style={{ position: "relative", height: "calc(100dvh - max(74px, env(safe-area-inset-bottom) + 66px))", display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto auto", gap: 6, maxWidth: 430, margin: "0 auto" }}>
+              <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <div>
+                  <h2 style={{ margin: 0, color: "#1d2430", fontSize: 20, fontWeight: 900, lineHeight: 1.12 }}>{LABELS.cashPaymentTitle}</h2>
+                  <p style={{ margin: "3px 0 0", color: "#667085", fontSize: 10 }}>{LABELS.paidFromCustomer}</p>
+                </div>
+                <button type="button" onClick={() => setPaymentView("choose")} style={{ minWidth: 38, minHeight: 38, border: "1px solid #d9e8f7", borderRadius: 9, background: "#fff", color: "#0f2745", fontSize: 12, fontWeight: 800 }}>{LABELS.close}</button>
+              </header>
+
+              <div style={{ minHeight: 0, overflowY: "hidden", scrollbarWidth: "none", display: "grid", alignContent: "start", gap: 5 }}>
+                <div style={{ display: "grid", gap: 5, border: "1px solid #d9e8f7", borderRadius: 12, background: "#f8fbff", padding: "7px 10px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "center" }}>
+                    <span style={{ color: "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.amountDue}</span>
+                    <b style={{ color: "#16a34a", fontSize: 27, fontWeight: 950, lineHeight: 1 }}>{BAHT}{money(totalAmount)}</b>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "center", borderTop: "1px dashed #c9dbf2", paddingTop: 6 }}>
+                    <span style={{ color: "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.cashReceived}</span>
+                    <b style={{ color: "#1d4ed8", fontSize: 26, fontWeight: 950, lineHeight: 1 }}>{money(cashReceivedAmount)}</b>
+                  </div>
+                </div>
+
+                <div style={{ border: "1px solid #d9e8f7", borderRadius: 12, background: "#fff", padding: 7 }}>
+                  <p style={{ margin: "0 0 5px", color: "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.keypad}</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 54px", gap: 6 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+                      {["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "00", "."].map((key) => (
+                        <button key={key} type="button" onClick={() => appendCashInput(key)} style={{ minHeight: 36, border: "1px solid #d9e8f7", borderRadius: 8, background: "#f8fbff", color: "#111827", fontSize: 19, fontWeight: 900 }}>{key}</button>
+                      ))}
+                    </div>
+                    <div style={{ display: "grid", gridTemplateRows: "1fr 1fr", gap: 6 }}>
+                      <button type="button" onClick={deleteCashInput} style={{ minHeight: 36, border: "1px solid #d9e8f7", borderRadius: 8, background: "#eef6ff", color: "#0f2745", fontSize: 11, fontWeight: 900 }}>{LABELS.delete}</button>
+                      <button type="button" onClick={() => setCashReceivedInput("")} style={{ minHeight: 36, border: 0, borderRadius: 8, background: "#164aa6", color: "#fff", fontSize: 11, fontWeight: 900 }}>{LABELS.clear}</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gap: 5 }}>
+                  <span style={{ color: "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.quickCash}</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 96px))", justifyContent: "center", gap: 6 }}>
+                    {[500, 1000, 1500].map((amount) => (
+                      <button key={amount} type="button" onClick={() => setCashReceivedInput(String(amount))} style={{ minHeight: 32, border: "1px solid #b9d7ff", borderRadius: 8, background: "#eaf4ff", color: "#1d4ed8", fontSize: 10, fontWeight: 900 }}>{BAHT}{amount.toLocaleString("th-TH")}.00</button>
+                    ))}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "center", border: "1px solid #d9e8f7", borderRadius: 11, background: "#f8fbff", padding: "6px 10px" }}>
+                    <span style={{ color: "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.change}</span>
+                    <b style={{ color: "#16a34a", fontSize: 22, fontWeight: 950, lineHeight: 1 }}>{BAHT}{money(cashChangeAmount)}</b>
+                  </div>
+                </div>
+              </div>
+
+              <footer style={{ display: "grid", gridTemplateColumns: "82px minmax(0, 216px)", justifyContent: "center", gap: 8, alignItems: "center" }}>
+                <button type="button" onClick={() => setPaymentView("choose")} style={{ minHeight: 38, border: "1px solid #fecaca", borderRadius: 8, background: "#fff1f1", color: "#b91c1c", fontSize: 11, fontWeight: 900 }}>{LABELS.cancelBill}</button>
+                <button type="button" onClick={() => checkout("cash")} disabled={Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount} style={{ display: "flex", minHeight: 38, alignItems: "center", justifyContent: "center", gap: 8, border: 0, borderRadius: 8, background: Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount ? "#7aa3e8" : "#164aa6", color: "#fff", fontSize: 12, fontWeight: 950 }}>{paymentSubmitting === "cash" ? "..." : <><span>{LABELS.confirmPayment}</span><CheckCircle2 size={14} /></>}</button>
+              </footer>
+              {paymentError ? <p style={{ margin: 0, color: "#d62929", fontSize: 12, fontWeight: 800 }}>{paymentError}</p> : null}
+              {paymentSubmitting === "cash" ? (
+                <div style={{ position: "fixed", inset: 0, zIndex: 2, display: "grid", placeItems: "center", background: "rgba(15,23,42,0.35)", backdropFilter: "blur(4px)", padding: 24 }}>
+                  <div style={{ display: "grid", justifyItems: "center", gap: 14, width: "min(360px, 100%)", borderRadius: 12, background: "#fff", padding: "28px 22px", color: "#0f2745", fontSize: 15, fontWeight: 900, boxShadow: "0 18px 48px rgba(15,39,69,0.22)" }}>
+                    <span style={{ width: 36, height: 36, border: "3px solid #d9e8f7", borderTopColor: "#2563eb", borderRadius: 999, animation: "posSpin 0.8s linear infinite" }} />
+                    {LABELS.savingTransfer}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          {paymentView === "transfer" ? (
+            <section style={{ position: "relative", display: "grid", gridTemplateRows: "auto auto auto", gap: 6, maxWidth: 500, margin: "0 auto", paddingBottom: 4 }}>
+              <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <h2 style={{ margin: 0, color: "#1d2430", fontSize: "clamp(18px, 4.8vw, 22px)", fontWeight: 900, lineHeight: 1.15 }}>{LABELS.transferPaymentTitle}</h2>
+                <button type="button" onClick={() => setPaymentView("choose")} style={{ minWidth: 40, minHeight: 40, border: "1px solid #d9e8f7", borderRadius: 9, background: "#fff", color: "#0f2745", fontSize: 17, fontWeight: 800 }}>x</button>
+              </header>
+
+              <div style={{ display: "grid", alignContent: "start", gap: 7, minHeight: 0, overflowY: "hidden", scrollbarWidth: "none", border: "1px solid #d9e8f7", borderRadius: 8, background: "#fff", padding: "10px 14px 9px" }}>
+                <div style={{ display: "grid", justifyItems: "center", gap: 2, borderBottom: "1px solid #d9e8f7", paddingBottom: 6 }}>
+                  <span style={{ color: "#334155", fontSize: 12, fontWeight: 800 }}>{LABELS.amountDue}</span>
+                  <b style={{ color: "#2563eb", fontSize: "clamp(34px, 9.5vw, 42px)", fontWeight: 950, lineHeight: 1 }}>{BAHT}{money(totalAmount)}</b>
+                </div>
+                <div style={{ display: "grid", justifyItems: "center", gap: 6 }}>
+                  <h3 style={{ margin: 0, color: "#334155", fontSize: 14, fontWeight: 900 }}>{LABELS.scanQrToPay}</h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", width: "min(276px, 100%)", border: "1px solid #d9e8f7", borderRadius: 8, overflow: "hidden" }}>
+                    <button type="button" onClick={() => setTransferMode("manual")} style={{ minHeight: 34, border: 0, background: transferMode === "manual" ? "#ff681f" : "#fff", color: transferMode === "manual" ? "#fff" : "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.manualTransfer}</button>
+                    <button type="button" onClick={() => setTransferMode("inet_nops")} style={{ minHeight: 34, border: 0, borderLeft: "1px solid #d9e8f7", background: transferMode === "inet_nops" ? "#ff681f" : "#fff", color: transferMode === "inet_nops" ? "#fff" : "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.inetQr}</button>
+                  </div>
+                  {transferQrLoading ? (
+                    <div style={{ display: "grid", minHeight: "min(50vw, 202px)", width: "min(252px, 66vw)", placeItems: "center", border: "1px solid #d9e8f7", borderRadius: 8, background: "#f8fbff", color: "#64748b", fontSize: 13, fontWeight: 800 }}>
+                      <span style={{ width: 30, height: 30, marginBottom: 8, border: "3px solid #d9e8f7", borderTopColor: "#2563eb", borderRadius: 999, animation: "posSpin 0.8s linear infinite" }} />
+                      {LABELS.loadingQr}
+                    </div>
+                  ) : transferMode === "inet_nops" ? (
+                    <div style={{ display: "grid", minHeight: "min(56vw, 224px)", width: "min(270px, 70vw)", placeItems: "center", border: "1px solid #d9e8f7", borderRadius: 8, background: "#f8fbff", color: "#64748b", padding: 12, textAlign: "center", fontSize: 13, fontWeight: 800 }}>
+                      {transferQr?.inet.enabled ? LABELS.inetQrNotReady : LABELS.inetQrNotReady}
+                    </div>
+                  ) : transferQr?.manual?.qrUrl ? (
+                    <div style={{ display: "grid", width: "min(270px, 70vw)", placeItems: "center", border: "1px solid #d9e8f7", borderRadius: 8, background: "#fff", padding: 8 }}>
+                      <Image src={transferQr.manual.qrUrl} alt={LABELS.scanQrToPay} width={220} height={220} unoptimized style={{ display: "block", width: "100%", maxWidth: 220, aspectRatio: "1 / 1", objectFit: "contain" }} />
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", minHeight: "min(56vw, 224px)", width: "min(270px, 70vw)", placeItems: "center", border: "1px solid #d9e8f7", borderRadius: 8, background: "#f8fbff", color: "#b91c1c", padding: 12, textAlign: "center", fontSize: 13, fontWeight: 800 }}>{LABELS.qrNotConfigured}</div>
+                  )}
+                  <p style={{ margin: 0, color: "#64748b", fontSize: 11, fontWeight: 800 }}>{LABELS.scanWithBankApp}</p>
+                  {transferQr?.manual?.accountName ? (
+                    <p style={{ margin: 0, color: "#64748b", fontSize: 10, textAlign: "center" }}>{[transferQr.manual.bankName, transferQr.manual.accountName, transferQr.manual.accountNumber].filter(Boolean).join(" / ")}</p>
+                  ) : null}
+                </div>
+              </div>
+
+              <button type="button" onClick={() => void checkout("transfer")} disabled={Boolean(paymentSubmitting) || transferQrLoading || transferMode !== "manual" || !transferQr?.manual?.qrUrl} style={{ width: "min(280px, 78vw)", justifySelf: "center", minHeight: 44, border: 0, borderRadius: 10, background: Boolean(paymentSubmitting) || transferQrLoading || transferMode !== "manual" || !transferQr?.manual?.qrUrl ? "#fda77a" : "#ff681f", color: "#fff", fontSize: 15, fontWeight: 950 }}>{LABELS.confirmTransfer}</button>
+              {paymentError ? <p style={{ margin: 0, color: "#d62929", fontSize: 12, fontWeight: 800 }}>{paymentError}</p> : null}
+              {paymentSubmitting === "transfer" ? (
+                <div style={{ position: "fixed", inset: 0, zIndex: 2, display: "grid", placeItems: "center", background: "rgba(15,23,42,0.35)", backdropFilter: "blur(4px)", padding: 24 }}>
+                  <div style={{ display: "grid", justifyItems: "center", gap: 14, width: "min(360px, 100%)", borderRadius: 12, background: "#fff", padding: "28px 22px", color: "#0f2745", fontSize: 15, fontWeight: 900, boxShadow: "0 18px 48px rgba(15,39,69,0.22)" }}>
+                    <span style={{ width: 36, height: 36, border: "3px solid #d9e8f7", borderTopColor: "#2563eb", borderRadius: 999, animation: "posSpin 0.8s linear infinite" }} />
+                    {LABELS.savingTransfer}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          {paymentView === "receipt" && receipt ? (
+            <section style={{ height: "calc(100dvh - max(18px, env(safe-area-inset-bottom)))", display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto", gap: 7, maxWidth: 430, margin: "0 auto" }}>
+              <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <h2 style={{ margin: 0, color: "#1d2430", fontSize: 19, fontWeight: 900 }}>{LABELS.receiptTitle}</h2>
+                <button type="button" onClick={closeReceiptWindow} style={{ minWidth: 72, minHeight: 36, border: "1px solid #d9e8f7", borderRadius: 9, background: "#fff", color: "#0f2745", fontSize: 12, fontWeight: 800 }}>{LABELS.closeWindow}</button>
+              </header>
+              <div style={{ minHeight: 0, maxHeight: "calc(100dvh - 126px)", overflowY: "auto", scrollbarWidth: "none", border: "1px solid #d9e8f7", borderRadius: 10, background: "#fff", padding: 8 }}>
+                <div style={{ textAlign: "center", borderBottom: "1px dashed #c9dbf2", paddingBottom: 6 }}>
+                  <Image src={receiptStoreProfile.logoUrl || "/brand/cpipos-symbol.png"} alt={receiptStoreProfile.displayName || "CpIPOS"} width={28} height={28} unoptimized style={{ width: 20, height: 20, objectFit: "contain" }} />
+                  <h3 style={{ margin: "3px 0 0", color: "#111827", fontSize: 15, fontWeight: 950 }}>{receiptStoreProfile.displayName || LABELS.storeName}</h3>
+                  {receiptStoreProfile.companyAddress ? <p style={{ margin: "1px 0 0", color: "#334155", fontSize: 10, fontWeight: 700 }}>{receiptStoreProfile.companyAddress}</p> : null}
+                  {receiptStoreProfile.contactPhone ? <p style={{ margin: "1px 0 0", color: "#334155", fontSize: 10, fontWeight: 700 }}>{receiptStoreProfile.contactPhone}</p> : null}
+                  <p style={{ margin: "1px 0 0", color: "#334155", fontSize: 11, fontWeight: 800 }}>{receiptStoreProfile.branchName || LABELS.branchName}</p>
+                </div>
+                <div style={{ display: "grid", gap: 4, borderBottom: "1px dashed #c9dbf2", padding: "6px 0", fontSize: 10 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10 }}><span>{LABELS.seller} :</span><b>sst182536</b></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10 }}><span>{LABELS.mode} :</span><b>{LABELS.takeaway}</b></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10 }}><span>{LABELS.billNo} :</span><b>{receipt.orderNo}</b></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10 }}><span>{LABELS.date} :</span><b>{new Date(receipt.paidAt).toLocaleString("th-TH")}</b></div>
+                </div>
+                <div style={{ borderBottom: "1px dashed #c9dbf2", padding: "6px 0" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 38px 68px", gap: 5, color: "#64748b", fontSize: 10, fontWeight: 800 }}>
+                    <span>{LABELS.productList}</span><span style={{ textAlign: "right" }}>{LABELS.quantity}</span><span style={{ textAlign: "right" }}>{LABELS.lineTotal}</span>
+                  </div>
+                  {receipt.lines.map((line, index) => (
+                    <div key={`${line.name}-${index}`} style={{ display: "grid", gridTemplateColumns: "1fr 38px 68px", gap: 5, marginTop: 6, color: "#111827", fontSize: 11 }}>
+                      <div><b>{line.name}</b><br /><span style={{ color: "#64748b", fontSize: 10 }}>x {BAHT}{money(line.unitPrice)}</span></div>
+                      <b style={{ textAlign: "right" }}>{line.quantity}</b>
+                      <b style={{ textAlign: "right" }}>{BAHT}{money(line.lineTotal)}</b>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "grid", gap: 5, paddingTop: 6, fontSize: 11 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto" }}><span>{LABELS.subtotal}</span><b>{BAHT}{money(receipt.subtotal)}</b></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto" }}><span>{LABELS.discount}</span><b>- {BAHT}{money(receipt.discount)}</b></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", fontSize: 13 }}><b>{LABELS.totalAfterDiscount}</b><b>{BAHT}{money(receipt.total)}</b></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto" }}><span>{receipt.paymentMethod === "cash" ? LABELS.cashReceived : LABELS.transfer}</span><b>{receipt.cashReceived === null ? LABELS.transfer : `${BAHT}${money(receipt.cashReceived)}`}</b></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto" }}><span>{LABELS.change}</span><b>{BAHT}{money(receipt.change)}</b></div>
+                </div>
+              </div>
+              <button type="button" onClick={printReceiptAndClose} style={{ width: "min(142px, 44vw)", justifySelf: "start", minHeight: 40, border: 0, borderRadius: 9, background: "#ff681f", color: "#fff", fontSize: 13, fontWeight: 950 }}>{LABELS.printReceipt}</button>
+            </section>
+          ) : null}
         </div>
       ) : null}
 

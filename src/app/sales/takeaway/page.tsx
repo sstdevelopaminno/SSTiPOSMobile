@@ -1,5 +1,5 @@
 import { MobileAppShell } from "@/components/layout/mobile-app-shell";
-import { TakeawayCartShell, type TakeawayCategory, type TakeawayProduct } from "@/components/sales/takeaway-cart-shell";
+import { TakeawayCartShell, type ReceiptStoreProfile, type TakeawayCategory, type TakeawayProduct } from "@/components/sales/takeaway-cart-shell";
 import { requireOpenShift } from "@/lib/permissions/guard";
 import { createServiceClient } from "@/lib/supabase/server";
 
@@ -22,8 +22,22 @@ type DraftOrderRow = {
   order_no: string;
 };
 
+type TenantStoreProfileRow = {
+  name: string | null;
+  display_name: string | null;
+  logo_url: string | null;
+  company_address: string | null;
+  contact_phone: string | null;
+  owner_phone: string | null;
+};
+
+type BranchRow = {
+  name: string | null;
+};
+
 const ALL_CATEGORY = "\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14";
 const OTHER_CATEGORY = "\u0e2d\u0e37\u0e48\u0e19\u0e46";
+const LABEL_FALLBACK_STORE = "\u0e23\u0e49\u0e32\u0e19\u0e04\u0e49\u0e32";
 
 function orderNumber() {
   const stamp = new Date().toISOString().replace(/\D/g, "").slice(0, 14);
@@ -35,7 +49,7 @@ export default async function TakeawaySalesPage() {
   const { scope, shift } = await requireOpenShift(["owner", "manager", "staff"]);
   const supabase = createServiceClient();
 
-  const [{ data: categoryRows }, { data: productRows }, { data: existingDraft, error: draftLookupError }] = await Promise.all([
+  const [{ data: categoryRows }, { data: productRows }, { data: existingDraft, error: draftLookupError }, { data: tenantProfile }, { data: branchProfile }] = await Promise.all([
     supabase
       .from("product_categories")
       .select("id,name")
@@ -62,6 +76,17 @@ export default async function TakeawaySalesPage() {
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle<DraftOrderRow>(),
+    supabase
+      .from("tenants")
+      .select("name,display_name,logo_url,company_address,contact_phone,owner_phone")
+      .eq("id", scope.tenantId)
+      .maybeSingle<TenantStoreProfileRow>(),
+    supabase
+      .from("branches")
+      .select("name")
+      .eq("id", scope.branchId)
+      .eq("tenant_id", scope.tenantId)
+      .maybeSingle<BranchRow>(),
   ]);
   if (draftLookupError) throw new Error(draftLookupError.message);
 
@@ -119,10 +144,17 @@ export default async function TakeawaySalesPage() {
     { id: "all", name: ALL_CATEGORY },
     ...Array.from(categoryNames).sort((a, b) => a.localeCompare(b, "th")).map((name) => ({ id: name, name })),
   ];
+  const receiptStoreProfile: ReceiptStoreProfile = {
+    displayName: String(tenantProfile?.display_name || tenantProfile?.name || LABEL_FALLBACK_STORE),
+    logoUrl: String(tenantProfile?.logo_url || "/brand/cpipos-symbol.png"),
+    companyAddress: String(tenantProfile?.company_address || ""),
+    contactPhone: String(tenantProfile?.contact_phone || tenantProfile?.owner_phone || ""),
+    branchName: String(branchProfile?.name || scope.branchId),
+  };
 
   return (
     <MobileAppShell scope={scope}>
-      <TakeawayCartShell categories={categories} products={products} orderId={orderId} orderNo={orderNo} />
+      <TakeawayCartShell categories={categories} products={products} orderId={orderId} orderNo={orderNo} receiptStoreProfile={receiptStoreProfile} />
     </MobileAppShell>
   );
 }

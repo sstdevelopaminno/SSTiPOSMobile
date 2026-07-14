@@ -227,3 +227,55 @@
 - Improved click stability by separating held-list loading from hold-submit loading, disabling duplicate hold submits, and clearing the product-added notice timeout on component unmount.
 - Verification passed: `npm run typecheck`, `npm run lint`, `npm run build`.
 
+## 2026-07-14 Takeaway Full-Screen Payment Flow
+
+- Changed the takeaway payment flow to use three UI states: payment-method choice, full-screen cash collection, and full-screen 58 mm receipt preview.
+- Cash payment now opens a mobile full-screen screen with amount due, received cash, quick cash buttons, numeric keypad, calculated change, cancel, and confirm payment controls.
+- Transfer payment still uses the existing checkout endpoint and now proceeds to the receipt preview after a successful payment.
+- Successful checkout clears the POS cart locally, keeps the paid order in the shared `orders`/`payments` database for the `รายการขาย` menu, and shows a receipt preview instead of immediately redirecting away.
+- Receipt preview includes CpIPOS branding, store/branch labels, bill number, payment date, line items, totals, received amount, change, and a print button that calls `window.print()` before closing the payment window.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-14 Takeaway Transfer QR Payment Flow
+
+- Checked the SSTiPOS POS transfer-payment modal and sales API behavior before implementing Mobile: SSTiPOS reads active `tenant_payment_accounts`, supports `promptpay_link` and `qr_image`, and exposes INET QR availability from `pos_payment_provider_settings`.
+- Added `GET /api/mobile/payments/qr` so SSTiPOSMobile loads the same branch-scoped QR/payment-account configuration instead of hardcoding QR data in the UI.
+- Changed the transfer payment choice to open a mobile full-screen `รับชำระเงินโอน` page with amount due, manual transfer / INET QR tabs, QR preview, account details, confirm button, and a saving overlay.
+- Manual transfer confirmation still uses `POST /api/mobile/sales/takeaway/checkout`, so successful transfer payments clear the POS cart, write the shared `orders`/`payments` records, and move to the 58 mm receipt preview.
+- INET QR is surfaced as a tab to match SSTiPOS terminology, but the Mobile flow currently blocks confirmation there until the INET create/status endpoint is wired into SSTiPOSMobile.
+- Reduced the transfer QR screen height after visual review: compacted header spacing, amount text, card padding, QR container, QR image size, helper text, and confirm button so the screen fits better above the mobile bottom menu.
+- Further compacted the transfer QR screen after the second visual pass: removed the stretched middle row, reduced the QR image to 220px max, tightened tab/button heights, and moved the confirm button directly under the QR card.
+- Fixed transfer checkout from the reported stuck overlay: the Mobile checkout endpoint now closes orders with `orders.status = completed`, matching the local order enum and shift summaries, instead of the invalid `paid` value; the error handler also no longer writes a non-enum `error` status.
+- Reduced the transfer confirm button width and hid the transfer dialog scrollbars so the QR payment screen no longer shows the tall browser scrollbar from the visual report.
+- Rechecked the payment status schema from SSTiPOS migrations and changed Mobile payment rows back to `payments.status = paid` while keeping orders as `completed`; this matches the shared database contract and prevents transfer checkout from failing at the payment insert step.
+- Locked `html` and `body` scrolling while the full-screen transfer QR view is open to hide the underlying mobile shell scrollbar, not only the transfer card scrollbar.
+- The terminal `segment-explorer-node.js#SegmentViewNode` error is a stale Next dev manifest/cache symptom; stop the running dev server and restart with `npm run dev` so the existing predev cache cleanup can regenerate `.next`.
+- Added Windows-specific webpack watch ignore rules for `System Volume Information` and `$RECYCLE.BIN` to reduce dev-server watcher errors and slow recompiles on drive-root scans; kept the patterns as forward-slash glob strings because this Next/Watchpack version rejects RegExp values and backslash globs.
+- Added a real CSS spinner animation for QR loading and transfer-saving overlays; the loader no longer appears frozen while waiting for the QR/payment request.
+- Compact receipt preview layout: smaller header, store block, line rows, totals, scroll area, and a shorter print button so the 58 mm receipt screen fits better on mobile.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Login Open Shift Redirect
+
+- Updated the device-selection login flow to check for an existing open shift for the verified employee on the selected branch/device.
+- Employees who already have an open shift now receive `redirectTo: "/sales"` after device selection, so they enter the sales menu directly.
+- Employees without an open shift still receive `redirectTo: "/shifts"` and must open a shift before selling.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Mobile Receipt Store Profile
+
+- Connected the Mobile takeaway receipt preview to the same tenant receipt profile fields used by SSTiPOS: `tenants.display_name`, `logo_url`, `company_address`, `contact_phone`, and branch name.
+- Replaced the hard-coded receipt logo/store labels in the Mobile receipt preview with the shared store profile values, falling back to the CpIPOS symbol only when no tenant logo is configured.
+- Further reduced the 58 mm receipt preview height and button size so the print button stays visible while receipt content scrolls inside the preview card.
+- After checkout receipt close/print, Mobile now returns to `/sales` instead of reopening `/sales/takeaway`, so the POS cart is cleared and the operator must choose a sales mode to open a new bill.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Login Speed and Cash Payment UI
+
+- Reduced store-code login perceived delay by no longer awaiting service worker cleanup before calling `/api/auth/store-code/verify`; cleanup now runs in the background while the auth request starts immediately.
+- Reworked the cash payment screen to better match the SSTiPOS-style payment flow on mobile: compact amount/received summary at the top, numeric keypad moved below it, side delete/clear controls, quick cash buttons under the keypad, change summary near the bottom, and shorter action buttons.
+- Kept the cash confirmation wired to the existing takeaway checkout endpoint so successful cash payment still writes the shared `orders`/`payments` records and shows the receipt preview.
+- Tightened the cash payment viewport after visual review: the full-screen cash dialog now hides outer scrolling, uses a fixed available-height grid, smaller keypad rows, narrower quick-cash buttons, and a compact footer so the cancel/confirm buttons stay visible.
+- Matched the cash confirmation step to the transfer flow: locked body scrolling while the cash screen is open, added a compact blue `ยืนยันชำระ` action with an icon, and reused the saving overlay while the checkout API records the sale.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+

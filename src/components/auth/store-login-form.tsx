@@ -128,7 +128,7 @@ export function StoreLoginForm() {
     let timeoutId: number | null = null;
 
     try {
-      await serviceWorkerCleanupRef.current;
+      void serviceWorkerCleanupRef.current;
       const controller = new AbortController();
       timeoutId = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
       const res = await fetch("/api/auth/store-code/verify", {

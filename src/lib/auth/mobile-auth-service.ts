@@ -274,8 +274,20 @@ export async function selectDeviceAndCreateSession(flow: MobileLoginFlow, device
       .eq("tenant_id", flow.tenantId);
   }
 
+  const { data: openShift, error: shiftError } = await supabase
+    .from("shifts")
+    .select("id")
+    .eq("tenant_id", flow.tenantId)
+    .eq("branch_id", flow.branchId)
+    .eq("device_code", device.device_code)
+    .eq("opened_by", flow.userId)
+    .eq("status", "open")
+    .maybeSingle<{ id: string }>();
+  if (shiftError) throw new Error(shiftError.message);
+
   return {
     sessionId: session.id,
+    hasOpenShift: Boolean(openShift),
     user: { id: flow.userId, name: flow.employeeName ?? flow.employeeCode ?? flow.userId },
     role: flow.role,
     permissions: roleToPermissions(flow.role),

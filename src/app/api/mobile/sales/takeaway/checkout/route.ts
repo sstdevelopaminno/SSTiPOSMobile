@@ -162,7 +162,7 @@ export async function POST(request: Request) {
       request_group_id: requestId,
       shift_id: shift.id,
       pos_session_id: scope.sessionId,
-      status: "completed",
+      status: "paid",
       metadata: { source_app: "mobile_web", cash_received: body.data.paymentMethod === "cash" ? cashReceived : null },
     });
     if (paymentError) throw new Error(paymentError.message);
@@ -170,7 +170,7 @@ export async function POST(request: Request) {
     const { error: completeError } = await supabase
       .from("orders")
       .update({
-        status: "paid",
+        status: "completed",
         paid_total: total,
         payment_completed_at: nowIso,
         payment_completed_by: scope.userId,
@@ -186,7 +186,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[takeaway.checkout]", error);
     if (orderId) {
-      await createServiceClient().from("orders").update({ status: "error", updated_at: new Date().toISOString() }).eq("id", orderId);
+      await createServiceClient().from("orders").update({ updated_at: new Date().toISOString() }).eq("id", orderId);
     }
     return fail("checkout_failed", "\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e2d\u0e2d\u0e40\u0e14\u0e2d\u0e23\u0e4c\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08 \u0e01\u0e23\u0e38\u0e13\u0e32\u0e25\u0e2d\u0e07\u0e43\u0e2b\u0e21\u0e48", 503);
   }
