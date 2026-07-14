@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LoadingDialog } from "@/components/auth/loading-dialog";
 
+const AUTH_REQUEST_TIMEOUT_MS = 12_000;
+
 const THAI_KEYBOARD_TO_CODE: Record<string, string> = {
   "ๅ": "1",
   "/": "2",
@@ -82,7 +84,10 @@ function getLoginErrorMessage(error: unknown) {
     return "ตรวจสอบรหัสร้านใช้เวลานานเกินไป กรุณาลองใหม่";
   }
   if (error instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(error.message)) {
-    return "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจว่า npm run dev ยังเปิดอยู่ แล้วลองใหม่";
+    const isLocal = typeof window !== "undefined" && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+    return isLocal
+      ? "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจว่า npm run dev ยังเปิดอยู่ แล้วลองใหม่"
+      : "เชื่อมต่อ API ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ต รีเฟรชหน้า แล้วลองใหม่";
   }
   return error instanceof Error ? error.message : "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่";
 }
@@ -99,6 +104,7 @@ function cacheBranchSelectionPayload(data: { tenant?: unknown; branches?: unknow
 export function StoreLoginForm() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const serviceWorkerCleanupRef = useRef<Promise<void> | null>(null);
   const [storeCode, setStoreCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -106,11 +112,11 @@ export function StoreLoginForm() {
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      registrations.forEach((registration) => {
-        registration.unregister().catch(() => undefined);
-      });
-    }).catch(() => undefined);
+    serviceWorkerCleanupRef.current = navigator.serviceWorker.getRegistrations()
+      .then(async (registrations) => {
+        await Promise.all(registrations.map((registration) => registration.unregister().catch(() => false)));
+      })
+      .catch(() => undefined);
   }, []);
 
   async function submit(e: React.FormEvent) {
@@ -119,13 +125,18 @@ export function StoreLoginForm() {
     setLoading(true);
     setError("");
     let keepLoadingForNavigation = false;
+    let timeoutId: number | null = null;
 
     try {
+      await serviceWorkerCleanupRef.current;
+      const controller = new AbortController();
+      timeoutId = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
       const res = await fetch("/api/auth/store-code/verify", {
         method: "POST",
         headers: { "Accept": "application/json", "Content-Type": "application/json" },
         cache: "no-store",
         credentials: "same-origin",
+        signal: controller.signal,
         body: JSON.stringify({ storeCode })
       });
       const json = await readJsonResponse(res, "ตรวจสอบรหัสร้านไม่สำเร็จ");
@@ -135,6 +146,7 @@ export function StoreLoginForm() {
     } catch (err) {
       setError(getLoginErrorMessage(err));
     } finally {
+      if (timeoutId) window.clearTimeout(timeoutId);
       if (!keepLoadingForNavigation) setLoading(false);
     }
   }
