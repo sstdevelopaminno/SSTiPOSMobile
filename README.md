@@ -8,19 +8,25 @@ pnpm install
 Copy-Item .env.example .env.local
 npm run dev
 ```
-![alt text]
+
 ## Environment
 Use the same Supabase project/database as `SSTiPOS` and `SSTiPOSSupport`. Do not create a second database and do not commit real secrets. Required names are listed in `.env.example` and `docs/vercel-env-checklist.md`.
 
 ## Commands
 ```powershell
 npm run dev          # live reload for UI/system development
+npm run dev:next     # same safe dev runner, kept for old habit
+npm run dev:raw      # raw Next dev without auto cache restart, debug only
 npm run dev:stable   # production-like local run after npm run build
 npm run typecheck
 npm run lint
 npm test
 npm run build
 ```
+
+`npm run dev` and `npm run dev:next` use `scripts/dev-safe.mjs`, which clears `.next` before startup and automatically restarts the dev server if the known Next dev manifest/cache errors appear (`segment-explorer-node`, `React Client Manifest`, `__webpack_modules__`, `/_app`, missing chunk `./87.js`, `fallback-build-manifest.json`, or `.next` ENOENT runtime cache errors). Use `npm run dev:raw` only when debugging Next itself.
+
+Stop the dev server before running `npm run build`; dev and build both write `.next`, and running them at the same time can produce missing page/chunk errors.
 
 ## Authentication Flow
 `/login/store -> /login/branch -> /login/employee -> /login/device -> /shifts -> /sales`

@@ -34,7 +34,8 @@ export async function GET() {
       .eq("tenant_id", scope.tenantId)
       .eq("branch_id", scope.branchId)
       .eq("order_type", "takeaway")
-      .eq("status", "held")
+      .eq("status", "draft")
+      .contains("metadata", { hold_state: "held" })
       .order("updated_at", { ascending: false })
       .limit(20);
     if (orderError) throw new Error(orderError.message);

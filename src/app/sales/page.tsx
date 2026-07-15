@@ -1,24 +1,13 @@
 import { MobileAppShell } from "@/components/layout/mobile-app-shell";
+import { HeldOrdersLauncher } from "@/components/sales/held-orders-launcher";
+import { SalesModeActions } from "@/components/sales/sales-mode-actions";
 import { requireOpenShift } from "@/lib/permissions/guard";
 import { createServiceClient } from "@/lib/supabase/server";
-import { Armchair, Bell, Bike, ChartNoAxesColumnIncreasing, CircleCheck, ClipboardList, PackageOpen, ReceiptText, ShoppingCart, type LucideIcon } from "lucide-react";
+import { Bell, ChartNoAxesColumnIncreasing, CircleCheck, ClipboardList, PackageOpen, ShoppingCart, type LucideIcon } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 
 function money(value: number) {
   return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function QuickAction({ href, icon: Icon, title, caption, tone }: { href: string; icon: LucideIcon; title: string; caption: string; tone: string }) {
-  return (
-    <Link href={href} className="block min-h-[92px] rounded-xl border border-[#d9e8f7] bg-white p-3 text-left no-underline shadow-sm active:scale-[0.98]">
-      <span className={`mb-2 flex h-9 w-9 items-center justify-center rounded-xl ${tone}`}>
-        <Icon size={20} />
-      </span>
-      <span className="block text-xs font-bold text-[#0f2745]">{title}</span>
-      <span className="mt-1 block text-[10px] leading-snug text-[#7a8fa8]">{caption}</span>
-    </Link>
-  );
 }
 
 function StatCard({ icon: Icon, label, value, tone }: { icon: LucideIcon; label: string; value: string; tone: string }) {
@@ -39,7 +28,7 @@ export default async function SalesPage() {
   const { scope, shift } = await requireOpenShift("sales:view");
   const supabase = createServiceClient();
   const today = new Date().toISOString().slice(0, 10);
-  const [{ data: orders }, { data: products }] = await Promise.all([
+  const [{ data: orders }, { count: productCount }] = await Promise.all([
     supabase
       .from("orders")
       .select("id,status,grand_total,total_amount")
@@ -50,11 +39,10 @@ export default async function SalesPage() {
       .limit(100),
     supabase
       .from("products")
-      .select("id")
+      .select("id", { count: "exact", head: true })
       .eq("tenant_id", scope.tenantId)
       .eq("branch_id", scope.branchId)
-      .eq("is_active", true)
-      .limit(500),
+      .eq("is_active", true),
   ]);
 
   const paidOrders = (orders ?? []).filter((order) => order.status === "paid" || order.status === "completed");
@@ -98,17 +86,15 @@ export default async function SalesPage() {
 
         <div>
           <h2 className="mb-2 text-sm font-bold text-[#0f2745]">ทางลัด</h2>
-          <div className="grid grid-cols-3 gap-2">
-            <QuickAction href="/sales/takeaway" icon={ReceiptText} title="กลับบ้าน" caption="เปิดออเดอร์" tone="bg-[#eef6ff] text-[#1677d9]" />
-            <QuickAction href="/sales/table" icon={Armchair} title="เลือกโต๊ะ" caption="เปิดโต๊ะลูกค้า" tone="bg-[#fff6e8] text-[#d98600]" />
-            <QuickAction href="/sales/delivery" icon={Bike} title="เดลิเวอรี่" caption="เปิดออเดอร์ส่ง" tone="bg-[#f2f0ff] text-[#6d5dfc]" />
-          </div>
+          <SalesModeActions />
         </div>
+
+        <HeldOrdersLauncher />
 
         <div className="grid grid-cols-3 gap-2">
           <StatCard icon={ChartNoAxesColumnIncreasing} label="ยอดขายวันนี้" value={`${money(todayTotal)} ฿`} tone="bg-[#f0f6ff] text-[#1677d9]" />
           <StatCard icon={ClipboardList} label="ออเดอร์ในกะ" value={String(activeOrders.length)} tone="bg-[#f0f6ff] text-[#1677d9]" />
-          <StatCard icon={PackageOpen} label="สินค้าพร้อมขาย" value={String(products?.length ?? 0)} tone="bg-[#f0f6ff] text-[#1677d9]" />
+          <StatCard icon={PackageOpen} label="สินค้าพร้อมขาย" value={String(productCount ?? 0)} tone="bg-[#f0f6ff] text-[#1677d9]" />
         </div>
       </section>
     </MobileAppShell>

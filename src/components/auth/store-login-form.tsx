@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LoadingDialog } from "@/components/auth/loading-dialog";
 
-const AUTH_REQUEST_TIMEOUT_MS = 12_000;
+const NAVIGATION_WATCHDOG_MS = 10_000;
 
 const THAI_KEYBOARD_TO_CODE: Record<string, string> = {
   "ๅ": "1",
@@ -105,19 +105,26 @@ export function StoreLoginForm() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const serviceWorkerCleanupRef = useRef<Promise<void> | null>(null);
+  const navigationWatchdogRef = useRef<number | null>(null);
   const [storeCode, setStoreCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const canSubmit = storeCode.trim().length > 0 && !loading;
 
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) return;
-    serviceWorkerCleanupRef.current = navigator.serviceWorker.getRegistrations()
-      .then(async (registrations) => {
-        await Promise.all(registrations.map((registration) => registration.unregister().catch(() => false)));
-      })
-      .catch(() => undefined);
-  }, []);
+    router.prefetch("/login/branch");
+    router.prefetch("/login/employee");
+    if ("serviceWorker" in navigator) {
+      serviceWorkerCleanupRef.current = navigator.serviceWorker.getRegistrations()
+        .then(async (registrations) => {
+          await Promise.all(registrations.map((registration) => registration.unregister().catch(() => false)));
+        })
+        .catch(() => undefined);
+    }
+    return () => {
+      if (navigationWatchdogRef.current) window.clearTimeout(navigationWatchdogRef.current);
+    };
+  }, [router]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -125,28 +132,27 @@ export function StoreLoginForm() {
     setLoading(true);
     setError("");
     let keepLoadingForNavigation = false;
-    let timeoutId: number | null = null;
 
     try {
       void serviceWorkerCleanupRef.current;
-      const controller = new AbortController();
-      timeoutId = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
       const res = await fetch("/api/auth/store-code/verify", {
         method: "POST",
         headers: { "Accept": "application/json", "Content-Type": "application/json" },
         cache: "no-store",
         credentials: "same-origin",
-        signal: controller.signal,
         body: JSON.stringify({ storeCode })
       });
       const json = await readJsonResponse(res, "ตรวจสอบรหัสร้านไม่สำเร็จ");
       cacheBranchSelectionPayload(json.data);
       keepLoadingForNavigation = true;
       router.push(json.data.nextStep === "branch" ? "/login/branch" : "/login/employee");
+      navigationWatchdogRef.current = window.setTimeout(() => {
+        setLoading(false);
+        setError("การเปลี่ยนหน้าช้ากว่าปกติ กรุณากดถัดไปอีกครั้ง");
+      }, NAVIGATION_WATCHDOG_MS);
     } catch (err) {
       setError(getLoginErrorMessage(err));
     } finally {
-      if (timeoutId) window.clearTimeout(timeoutId);
       if (!keepLoadingForNavigation) setLoading(false);
     }
   }

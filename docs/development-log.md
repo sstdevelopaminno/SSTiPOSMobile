@@ -279,3 +279,146 @@
 - Matched the cash confirmation step to the transfer flow: locked body scrolling while the cash screen is open, added a compact blue `ยืนยันชำระ` action with an icon, and reused the saving overlay while the checkout API records the sale.
 - Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
 
+## 2026-07-15 Login and Sales Responsiveness Fix
+
+- Removed the hard client-side 12-second abort from store-code login so slow Supabase/Next responses do not incorrectly fail with a timeout while the server is still working.
+- Added route prefetching and a 10-second navigation watchdog to store, branch, employee, and device login steps so a slow transition releases the loading state and gives the operator a retry message instead of appearing permanently stuck.
+- Rewrote mojibake Thai text in branch selection, employee login, device selection, and the `/sales` launcher so the UI renders stable, readable Thai labels.
+- Added `touch-manipulation`, larger tap areas, active feedback, and explicit prefetching to sales quick actions and the bottom navigation to improve mobile tap responsiveness.
+- Reduced `/sales` initial data loading by replacing the active-product row fetch with a Supabase count query, keeping the same displayed product total without downloading up to 500 product rows.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Dev Server Cache Auto-Recovery
+
+- Added `scripts/dev-safe.mjs` and changed `npm run dev` to start Next through this wrapper instead of calling `next dev` directly.
+- The wrapper clears `.next` before startup and watches stdout/stderr for the recurring Next dev manifest/cache failures seen during local editing: `segment-explorer-node`, `SegmentViewNode`, `React Client Manifest`, `__webpack_modules__[moduleId] is not a function`, `/_app` undefined, and `MODULE_NOT_FOUND`.
+- When one of those errors appears, the wrapper terminates the current dev process, clears `.next`, and restarts Next dev automatically so the developer does not need to manually stop the server and delete cache every time.
+- Kept raw Next dev available as `npm run dev:next` for debugging the framework behavior without the recovery wrapper.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Dev Server Missing Manifest Patterns
+
+- Extended `scripts/dev-safe.mjs` to also recover from missing generated chunk errors such as `Cannot find module './87.js'`, missing `.next/fallback-build-manifest.json`, and generic `.next` `ENOENT` runtime cache errors.
+- These errors are the same stale/incomplete Next dev build state as the earlier `segment-explorer-node` manifest issue, but they appear under different file names after route recompilation.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Numeric Employee Code Field
+
+- Locked the employee login field to numeric input only by filtering non-digit characters in the mobile form and validating `employeeCode` as 1-32 digits on the auth API.
+- Changed the employee code input to a password-style field with an eye toggle so operators can briefly reveal the code for checking.
+- Added automatic hiding after 5 seconds and on blur/submit so the code returns to the masked state without manual action.
+- Cleaned the employee-login UI and API Thai messages that had reverted to mojibake text.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Safe Dev Alias Clarification
+
+- Changed `npm run dev:next` to use the same `scripts/dev-safe.mjs` wrapper as `npm run dev` because the raw Next command still hits the known missing chunk and `/_app` cache failures.
+- Added `npm run dev:raw` for the rare case where raw `next dev` is needed to debug framework behavior without auto-recovery.
+- Updated README command descriptions so daily development uses only the safe runner.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Build and Typecheck Cache Isolation
+
+- Added `tsconfig.typecheck.json` and changed `npm run typecheck` to use it so local source typechecks do not depend on `.next/types` existing after dev cache cleanup.
+- Kept Next's generated `.next/types/**/*.ts` in the main `tsconfig.json` because `next build` manages and validates those generated route types.
+- Added `prebuild` cache cleanup before `next build` and documented that the dev server should be stopped before production builds because both commands write to `.next`.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Sales Mode Navigation Feedback
+
+- Replaced the `/sales` shortcut links with a client-side `SalesModeActions` component so tapping `กลับบ้าน`, `เลือกโต๊ะ`, or `เดลิเวอรี่` immediately shows pressed state and a loading dialog before the server-rendered destination finishes loading.
+- Added `/sales/loading.tsx` as a route-level loading fallback for sales-mode transitions, reducing the feeling that the UI is frozen during server guard/database work.
+- Kept route prefetching for all sales modes and disabled duplicate taps while a mode is opening to avoid double navigation.
+- Rewrote mojibake Thai labels in the `/sales`, `/sales/table`, and `/sales/delivery` screens.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Cash Payment Keypad Fit
+
+- Increased the cash keypad number buttons from 36px to 40px high and slightly widened the side delete/clear column so the controls look more balanced on mobile.
+- Slightly increased quick-cash button height and width while keeping the three-button row inside the 430px mobile frame.
+- Raised the cash payment footer by reducing the dialog available height and adding footer bottom padding, so the `ยืนยันชำระ` action sits higher above the bottom navigation.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Cash Keypad Enlargement
+
+- Moved the numeric keypad block down slightly with additional top margin and label spacing.
+- Enlarged numeric keypad buttons from 40px to 44px high, increased key font size, widened the delete/clear column, and increased keypad gaps for a roomier touch target.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Cash Keypad Centering and Spacing
+
+- Enlarged cash keypad buttons again from 44px to 48px high, increased key font size, widened the delete/clear column, and increased keypad gaps to make the keypad feel more balanced.
+- Centered and widened the quick-cash row with equal-width buttons, larger button height, and cleaner spacing between the three quick amount choices.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Cash Change and Footer Button Sizing
+
+- Enlarged the cash change summary row with wider layout, larger label/value text, and roomier padding.
+- Raised the cash payment footer upward, widened both cancel and confirm columns, increased button height, and improved the spacing between the two footer actions.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Cash Amount Summary Enlargement
+
+- Enlarged the cash amount summary card with larger padding, bigger labels, and larger amount values for both `ยอดที่ต้องชำระ` and `รับเงินสด`.
+- Increased row gaps and divider spacing so the amount summary reads more clearly at mobile width.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Checkout Receipt and Sales List Stability
+
+- Centralized paid-bill cleanup after successful takeaway checkout so cart lines, discount, cash input, transfer reference, popups, and paging are cleared immediately after the database checkout succeeds.
+- Changed receipt close behavior to `router.replace("/sales")` plus refresh so closing the receipt returns to the sales mode menu immediately and the next `กลับบ้าน` click creates a fresh draft bill number.
+- Added visible `พิมพ์ใบเสร็จ` actions at the top and bottom of the receipt screen so print is reachable even when receipt content fills the viewport.
+- Rewrote the `รายการขาย` page Thai labels and status/type display, keeping it backed by the shared `orders` query for the current shift.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Held Bills Moved to Sales Menu
+
+- Moved the `รายการพัก` action out of the takeaway cashier button row and added it to the main `/sales` menu as a dedicated `HeldOrdersLauncher`.
+- Updated `พักบิล` so a successful hold writes the draft order as `orders.status = held`, clears the current cashier cart state, and returns the operator to `/sales`.
+- Added held-bill restore from the sales menu: selecting `เรียกกลับ` changes the held order back to draft, navigates to `/sales/takeaway`, and the takeaway page loads existing draft line items back into the cart.
+- Added server-side draft item loading for `/sales/takeaway` so restored held bills are visible after navigation, not only when restored from an in-page modal.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Empty Draft Hold and Hold Popup
+
+- Fixed the takeaway hold API so draft bills with zero cart lines can still be moved to `orders.status = held` without trying to insert an empty `order_items` payload.
+- Kept product validation and item persistence for non-empty carts, while allowing the cashier to park a newly opened bill before products are added.
+- Changed the cashier `พักบิล` button so it remains available for empty draft bills and shows a modal saving popup while the hold request is being recorded.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Held Bill Enum Compatibility Fix
+
+- Fixed the production database enum mismatch where `orders.status = held` failed because the current `order_status` enum does not include `held`.
+- Kept held bills as `status = draft` and marks them with `metadata.hold_state = held`, so the hold flow works without a database enum migration.
+- Updated the held-bill list and restore APIs to read held bills from metadata, and changed `/sales/takeaway` to ignore held drafts when opening a fresh cashier bill.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-15 Held Bill Cancel With PIN
+
+- Added a cancel action to each held bill in the `/sales` held-bill popup.
+- The cancel flow opens a PIN confirmation dialog and reuses the existing manager/owner PIN validation from the takeaway cancel API.
+- Updated the cancel API to preserve existing order metadata and mark held drafts as `hold_state = cancelled` when the bill is voided.
+- Cleaned the held-bill popup Thai labels while keeping restore and loading feedback intact.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-16 Product Picker Responsiveness and Ingredients
+
+- Reduced the takeaway product picker height from nearly full-screen to a centered compact dialog so it no longer stretches too far down the viewport.
+- Limited the rendered product cards per open picker to reduce tap lag from large product lists, while keeping category filtering available to narrow the list.
+- Added a second-step ingredient selector for products that provide `metadata.ingredients` or `metadata.recipe`, showing each ingredient name, quantity, and unit before adding the product to the cart.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-16 Hold Bill Navigation Stability
+
+- Removed the immediate `router.refresh()` after successful takeaway hold because it could race with `router.replace("/sales")` and re-render the cashier screen with a new draft bill.
+- Changed the hold success path to clear cashier state, close transient dialogs, dismiss the hold popup, and then navigate directly to the sales menu.
+- Added an update-result guard in the hold API so the client only leaves the cashier screen after the draft order is confirmed as held.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-16 Six Digit Numeric PIN Entry
+
+- Changed takeaway bill cancellation PIN entry to accept digits only and cap input at 6 characters.
+- Replaced the free-text PIN field with six fixed digit boxes so operators can clearly see the required PIN length.
+- Applied the same six-digit numeric PIN control to held-bill cancellation from the held-bill popup.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+

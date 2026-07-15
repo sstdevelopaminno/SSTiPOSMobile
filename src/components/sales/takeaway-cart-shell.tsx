@@ -18,10 +18,20 @@ export type TakeawayProduct = {
   category: string;
   price: number;
   sellUnit: string | null;
+  ingredients?: ProductIngredientOption[];
 };
 
 type CartLine = TakeawayProduct & {
   quantity: number;
+  selectedIngredients?: ProductIngredientOption[];
+};
+
+type ProductIngredientOption = {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  selected: boolean;
 };
 
 type HeldOrder = {
@@ -164,25 +174,45 @@ function money(value: number) {
   return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function normalizeSixDigitPin(value: string) {
+  return value.replace(/\D/g, "").slice(0, 6);
+}
+
+function PinDigits({ value }: { value: string }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6 }}>
+      {Array.from({ length: 6 }).map((_, index) => (
+        <span key={index} style={{ display: "grid", minHeight: 44, placeItems: "center", border: "1px solid #ffd7d7", borderRadius: 10, background: "#fff", color: "#0f2745", fontSize: 18, fontWeight: 950 }}>
+          {value[index] ? "*" : ""}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function TakeawayCartShell({
   categories,
   products,
   orderId,
   orderNo,
-  receiptStoreProfile
+  receiptStoreProfile,
+  initialCart = []
 }: {
   categories: TakeawayCategory[];
   products: TakeawayProduct[];
   orderId: string;
   orderNo: string;
   receiptStoreProfile: ReceiptStoreProfile;
+  initialCart?: CartLine[];
 }) {
   const router = useRouter();
   const [activeOrderId, setActiveOrderId] = useState(orderId);
   const [activeOrderNo, setActiveOrderNo] = useState(orderNo);
-  const [cart, setCart] = useState<CartLine[]>([]);
+  const [cart, setCart] = useState<CartLine[]>(initialCart);
   const [page, setPage] = useState(0);
   const [productPickerOpen, setProductPickerOpen] = useState(false);
+  const [ingredientProduct, setIngredientProduct] = useState<TakeawayProduct | null>(null);
+  const [ingredientSelections, setIngredientSelections] = useState<Record<string, boolean>>({});
   const [discountOpen, setDiscountOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentView, setPaymentView] = useState<"choose" | "cash" | "transfer" | "receipt">("choose");
@@ -197,10 +227,11 @@ export function TakeawayCartShell({
   const [holdOpen, setHoldOpen] = useState(false);
   const [heldListOpen, setHeldListOpen] = useState(false);
   const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([]);
-  const [heldLoading, setHeldLoading] = useState(false);
+  const [heldLoading] = useState(false);
   const [restoringHeldId, setRestoringHeldId] = useState<string | null>(null);
-  const [holdSubmitting, setHoldSubmitting] = useState(false);
   const [heldError, setHeldError] = useState("");
+  const [holdSubmitting, setHoldSubmitting] = useState(false);
+  const [holdSubmitError, setHoldSubmitError] = useState("");
   const [discountMode, setDiscountMode] = useState<"percent" | "amount">("percent");
   const [discountInput, setDiscountInput] = useState("");
   const [holdPin, setHoldPin] = useState("");
@@ -214,7 +245,9 @@ export function TakeawayCartShell({
   useEffect(() => {
     setActiveOrderId(orderId);
     setActiveOrderNo(orderNo);
-  }, [orderId, orderNo]);
+    setCart(initialCart);
+    setPage(0);
+  }, [initialCart, orderId, orderNo]);
 
   useEffect(() => {
     return () => {
@@ -243,6 +276,7 @@ export function TakeawayCartShell({
   const visibleProducts = useMemo(() => {
     return products.filter((product) => activeCategory === LABELS.all || product.category === activeCategory);
   }, [activeCategory, products]);
+  const renderedProducts = useMemo(() => visibleProducts.slice(0, 40), [visibleProducts]);
 
   const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotalAmount = cart.reduce((sum, item) => sum + item.quantity * item.price, 0);
@@ -255,17 +289,39 @@ export function TakeawayCartShell({
   const currentPage = Math.min(page, pageCount - 1);
   const visibleCart = useMemo(() => cart.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE), [cart, currentPage]);
 
-  function addProduct(product: TakeawayProduct) {
+  function addProduct(product: TakeawayProduct, selectedIngredients?: ProductIngredientOption[]) {
     setCart((current) => {
-      const existing = current.find((item) => item.id === product.id);
+      const selectedKey = JSON.stringify((selectedIngredients ?? []).map((item) => [item.id, item.selected]));
+      const existing = current.find((item) => item.id === product.id && JSON.stringify((item.selectedIngredients ?? []).map((entry) => [entry.id, entry.selected])) === selectedKey);
       if (existing) {
-        return current.map((item) => (item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item));
+        return current.map((item) => (item === existing ? { ...item, quantity: item.quantity + 1 } : item));
       }
-      return [...current, { ...product, quantity: 1 }];
+      return [...current, { ...product, selectedIngredients, quantity: 1 }];
     });
     setAddedNotice(product.name);
     if (addedNoticeTimerRef.current) window.clearTimeout(addedNoticeTimerRef.current);
     addedNoticeTimerRef.current = window.setTimeout(() => setAddedNotice(""), 1200);
+  }
+
+  function chooseProduct(product: TakeawayProduct) {
+    const ingredients = product.ingredients ?? [];
+    if (!ingredients.length) {
+      addProduct(product);
+      return;
+    }
+    setIngredientProduct(product);
+    setIngredientSelections(Object.fromEntries(ingredients.map((item) => [item.id, item.selected])));
+  }
+
+  function confirmIngredientProduct() {
+    if (!ingredientProduct) return;
+    const selected = (ingredientProduct.ingredients ?? []).map((item) => ({
+      ...item,
+      selected: ingredientSelections[item.id] ?? item.selected,
+    }));
+    addProduct(ingredientProduct, selected);
+    setIngredientProduct(null);
+    setIngredientSelections({});
   }
 
   function updateQuantity(productId: string, delta: number) {
@@ -340,11 +396,23 @@ export function TakeawayCartShell({
     setCashReceivedInput((current) => current.slice(0, -1));
   }
 
+  function clearPaidBillState() {
+    setCart([]);
+    setDiscountInput("");
+    setCashReceivedInput("");
+    setTransferReference("");
+    setPage(0);
+    setProductPickerOpen(false);
+    setDiscountOpen(false);
+    setHoldOpen(false);
+  }
+
   function closeReceiptWindow() {
+    clearPaidBillState();
     setPaymentOpen(false);
     setPaymentView("choose");
     setReceipt(null);
-    router.push("/sales");
+    router.replace("/sales");
     router.refresh();
   }
 
@@ -382,9 +450,10 @@ export function TakeawayCartShell({
   }
 
   async function holdCurrentBill() {
-    if (!cart.length || holdSubmitting) return;
+    if (holdSubmitting) return;
     setHoldSubmitting(true);
-    setHeldError("");
+    setHoldSubmitError("");
+    let holdSucceeded = false;
     try {
       const response = await fetch("/api/mobile/sales/takeaway/hold", {
         method: "POST",
@@ -398,35 +467,18 @@ export function TakeawayCartShell({
       });
       const json = await response.json().catch(() => null);
       if (!response.ok || json?.error) {
-        setHeldError(json?.error?.message ?? "Hold failed");
+        setHoldSubmitError(json?.error?.message ?? "พักบิลไม่สำเร็จ");
         return;
       }
-      setCart([]);
-      setDiscountInput("");
-      setCashReceivedInput("");
-      setTransferReference("");
-      setPage(0);
-      await openHeldOrders();
-      router.refresh();
-    } finally {
+      holdSucceeded = true;
+      clearPaidBillState();
+      setPaymentOpen(false);
+      setPaymentView("choose");
+      setReceipt(null);
       setHoldSubmitting(false);
-    }
-  }
-
-  async function openHeldOrders() {
-    setHeldListOpen(true);
-    setHeldLoading(true);
-    setHeldError("");
-    try {
-      const response = await fetch("/api/mobile/sales/takeaway/held", { cache: "no-store" });
-      const json = await response.json().catch(() => null);
-      if (!response.ok || json?.error) {
-        setHeldError(json?.error?.message ?? "Load held orders failed");
-        return;
-      }
-      setHeldOrders(json?.data?.orders ?? []);
+      router.replace(json?.data?.redirectTo ?? "/sales");
     } finally {
-      setHeldLoading(false);
+      if (!holdSucceeded) setHoldSubmitting(false);
     }
   }
 
@@ -445,34 +497,9 @@ export function TakeawayCartShell({
         setHeldError(json?.error?.message ?? LABELS.restoreHeldFailed);
         return;
       }
-
-      const restored = json?.data?.order ?? order;
-      const nextCart = (restored.items ?? order.items)
-        .map((item: HeldOrder["items"][number]) => {
-          const product = item.productId ? products.find((entry) => entry.id === item.productId) : undefined;
-          if (!product && !item.productId) return null;
-          return {
-            id: product?.id ?? String(item.productId),
-            name: product?.name ?? item.name,
-            sku: product?.sku ?? null,
-            category: product?.category ?? LABELS.all,
-            price: Number(item.unitPrice ?? product?.price ?? 0),
-            sellUnit: product?.sellUnit ?? null,
-            quantity: Number(item.quantity ?? 0),
-          };
-        })
-        .filter((item: CartLine | null): item is CartLine => Boolean(item && item.quantity > 0));
-
-      setActiveOrderId(restored.id ?? order.id);
-      setActiveOrderNo(restored.orderNo ?? order.orderNo);
-      setCart(nextCart);
-      setDiscountMode("amount");
-      setDiscountInput(String(Number(restored.discount ?? order.discount ?? 0) || ""));
-      setCashReceivedInput("");
-      setTransferReference("");
-      setPage(0);
       setHeldOrders((current) => current.filter((entry) => entry.id !== order.id));
       setHeldListOpen(false);
+      router.replace("/sales/takeaway");
       router.refresh();
     } finally {
       setRestoringHeldId(null);
@@ -523,11 +550,7 @@ export function TakeawayCartShell({
         setPaymentError(json?.error?.message ?? LABELS.paymentFailed);
         return;
       }
-      setCart([]);
-      setDiscountInput("");
-      setCashReceivedInput("");
-      setTransferReference("");
-      setPage(0);
+      clearPaidBillState();
       setReceipt({ ...receiptSnapshot, orderNo: json?.data?.orderNo ?? receiptSnapshot.orderNo, total: Number(json?.data?.total ?? receiptSnapshot.total) });
       setPaymentView("receipt");
       router.refresh();
@@ -587,7 +610,7 @@ export function TakeawayCartShell({
           </div>
         ) : null}
 
-        <div style={{ display: "grid", gridTemplateColumns: "1.15fr 1fr 1fr", gap: 8, borderTop: "1px solid #eef4fb", paddingTop: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1.15fr 1fr", gap: 8, borderTop: "1px solid #eef4fb", paddingTop: 12 }}>
           <button type="button" onClick={() => setProductPickerOpen(true)} style={{ position: "relative", zIndex: 2, display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", gap: 6, border: 0, borderRadius: 13, background: "#1677d9", color: "#fff", fontSize: 12, fontWeight: 900, pointerEvents: "auto" }}>
             <Plus size={18} />
             {LABELS.addProduct}
@@ -595,9 +618,6 @@ export function TakeawayCartShell({
           <button type="button" onClick={() => setDiscountOpen(true)} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", gap: 6, border: "1px solid #d9e8f7", borderRadius: 13, background: "#fff", color: "#17416f", fontSize: 12, fontWeight: 900 }}>
             <Percent size={16} />
             {LABELS.discount}
-          </button>
-          <button type="button" onClick={openHeldOrders} disabled={heldLoading} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", border: "1px solid #d9e8f7", borderRadius: 13, background: "#fff", color: "#17416f", fontSize: 12, fontWeight: 900 }}>
-            {heldLoading ? "..." : LABELS.heldOrders}
           </button>
         </div>
       </div>
@@ -662,18 +682,23 @@ export function TakeawayCartShell({
           <button type="button" onClick={() => setHoldOpen(true)} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", border: "1px solid #ffd7d7", borderRadius: 13, background: "#fff8f8", color: "#d62929", fontSize: 12, fontWeight: 900 }}>
             {LABELS.cancelBill}
           </button>
-          <button type="button" onClick={holdCurrentBill} disabled={!cart.length || holdSubmitting} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", border: "1px solid #ffdca8", borderRadius: 13, background: !cart.length || holdSubmitting ? "#fff4e1" : "#fffaf2", color: !cart.length || holdSubmitting ? "#d6a96f" : "#b65f00", fontSize: 12, fontWeight: 900 }}>
+          <button type="button" onClick={holdCurrentBill} disabled={holdSubmitting} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", border: "1px solid #ffdca8", borderRadius: 13, background: holdSubmitting ? "#fff4e1" : "#fffaf2", color: holdSubmitting ? "#d6a96f" : "#b65f00", fontSize: 12, fontWeight: 900 }}>
             {holdSubmitting ? "..." : LABELS.holdBill}
           </button>
           <button type="button" onClick={openPaymentChooser} disabled={!cart.length} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", border: 0, borderRadius: 13, background: totalQuantity ? "#1677d9" : "#a8cdf2", color: "#fff", fontSize: 12, fontWeight: 900 }}>
             {LABELS.pay} {money(totalAmount)} {BAHT}
           </button>
         </div>
+        {holdSubmitError ? (
+          <p style={{ margin: "8px 0 0", color: "#d62929", fontSize: 12, fontWeight: 800 }}>
+            {holdSubmitError}
+          </p>
+        ) : null}
       </div>
 
       {productPickerOpen ? (
-        <div role="dialog" aria-modal="true" aria-label={LABELS.chooseProduct} style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,39,69,0.35)", padding: "16px 10px max(16px, env(safe-area-inset-bottom))" }}>
-          <section style={{ width: "min(96vw, 462px)", maxHeight: "90dvh", overflow: "hidden", border: "1px solid #d9e8f7", borderRadius: 20, background: "#f5f8fb", boxShadow: "0 18px 48px rgba(15,39,69,0.22)" }}>
+        <div role="dialog" aria-modal="true" aria-label={LABELS.chooseProduct} style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,39,69,0.35)", padding: "14px 10px max(14px, env(safe-area-inset-bottom))" }}>
+          <section style={{ width: "min(94vw, 462px)", maxHeight: "78dvh", overflow: "hidden", border: "1px solid #d9e8f7", borderRadius: 20, background: "#f5f8fb", boxShadow: "0 18px 48px rgba(15,39,69,0.22)" }}>
             <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, borderBottom: "1px solid #d9e8f7", background: "#fff", padding: 14 }}>
               <div>
                 <h2 style={{ margin: 0, color: "#0f2745", fontSize: 16, fontWeight: 900 }}>{LABELS.chooseProduct}</h2>
@@ -708,16 +733,23 @@ export function TakeawayCartShell({
               </button>
             </div>
 
-            <div style={{ maxHeight: "calc(90dvh - 116px)", overflowY: "auto", padding: "4px 12px 14px" }}>
+            <div style={{ maxHeight: "calc(78dvh - 116px)", overflowY: "auto", padding: "4px 12px 14px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
-                {visibleProducts.map((product) => (
-                  <button key={product.id} type="button" onClick={() => addProduct(product)} style={{ minHeight: 118, border: "1px solid #d9e8f7", borderRadius: 14, background: "#fff", padding: 12, textAlign: "left", boxShadow: "0 4px 12px rgba(15,39,69,0.06)" }}>
+                {renderedProducts.map((product) => (
+                  <button key={product.id} type="button" onClick={() => chooseProduct(product)} style={{ minHeight: 110, border: "1px solid #d9e8f7", borderRadius: 14, background: "#fff", padding: 12, textAlign: "left", boxShadow: "0 4px 12px rgba(15,39,69,0.06)", touchAction: "manipulation" }}>
                     <strong style={{ display: "block", minHeight: 34, color: "#0f2745", fontSize: 13, fontWeight: 900, lineHeight: 1.25 }}>{product.name}</strong>
                     <span style={{ display: "block", marginTop: 6, color: "#7a8fa8", fontSize: 10, lineHeight: 1.25 }}>{product.sku ?? product.category}</span>
+                    {product.ingredients?.length ? <span style={{ display: "inline-flex", marginTop: 7, borderRadius: 999, background: "#eef6ff", color: "#1677d9", padding: "3px 7px", fontSize: 10, fontWeight: 900 }}>มีวัตถุดิบ {product.ingredients.length}</span> : null}
                     <span style={{ display: "block", marginTop: 10, color: "#1677d9", fontSize: 15, fontWeight: 900 }}>{money(product.price)} {BAHT}</span>
                   </button>
                 ))}
               </div>
+
+              {visibleProducts.length > renderedProducts.length ? (
+                <div style={{ marginTop: 10, border: "1px solid #d9e8f7", borderRadius: 14, background: "#fff", padding: 12, color: "#587398", fontSize: 12, fontWeight: 800, textAlign: "center" }}>
+                  แสดง {renderedProducts.length} จาก {visibleProducts.length} รายการ กรุณาเลือกหมวดให้แคบลง
+                </div>
+              ) : null}
 
               {visibleProducts.length === 0 ? (
                 <div style={{ border: "1px solid #d9e8f7", borderRadius: 14, background: "#fff", padding: 16, color: "#7a8fa8", fontSize: 13, textAlign: "center" }}>
@@ -725,6 +757,38 @@ export function TakeawayCartShell({
                 </div>
               ) : null}
             </div>
+          </section>
+        </div>
+      ) : null}
+
+      {ingredientProduct ? (
+        <div role="dialog" aria-modal="true" aria-label="เลือกวัตถุดิบ" style={{ position: "fixed", inset: 0, zIndex: 65, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,39,69,0.38)", padding: 16 }}>
+          <section style={{ width: "min(92vw, 390px)", maxHeight: "72dvh", overflow: "hidden", border: "1px solid #d9e8f7", borderRadius: 18, background: "#fff", boxShadow: "0 18px 48px rgba(15,39,69,0.24)" }}>
+            <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, borderBottom: "1px solid #eef4fb", padding: 14 }}>
+              <div>
+                <h2 style={{ margin: 0, color: "#0f2745", fontSize: 16, fontWeight: 900 }}>เลือกวัตถุดิบ</h2>
+                <p style={{ margin: "2px 0 0", color: "#7a8fa8", fontSize: 11, fontWeight: 800 }}>{ingredientProduct.name}</p>
+              </div>
+              <button type="button" onClick={() => setIngredientProduct(null)} aria-label={LABELS.close} style={{ display: "flex", width: 34, height: 34, minHeight: 34, alignItems: "center", justifyContent: "center", border: "1px solid #d9e8f7", borderRadius: 999, background: "#fff", color: "#17416f" }}>
+                <X size={17} />
+              </button>
+            </header>
+            <div style={{ display: "grid", gap: 8, maxHeight: "calc(72dvh - 132px)", overflowY: "auto", padding: 12 }}>
+              {(ingredientProduct.ingredients ?? []).map((ingredient) => {
+                const checked = ingredientSelections[ingredient.id] ?? ingredient.selected;
+                return (
+                  <label key={ingredient.id} style={{ display: "grid", gridTemplateColumns: "28px 1fr auto", gap: 8, alignItems: "center", border: "1px solid #d9e8f7", borderRadius: 12, background: checked ? "#f5fbff" : "#fff", padding: "10px 12px" }}>
+                    <input type="checkbox" checked={checked} onChange={(event) => setIngredientSelections((current) => ({ ...current, [ingredient.id]: event.target.checked }))} style={{ width: 18, height: 18 }} />
+                    <span style={{ minWidth: 0, color: "#0f2745", fontSize: 13, fontWeight: 900 }}>{ingredient.name}</span>
+                    <b style={{ color: "#1677d9", fontSize: 12 }}>{ingredient.quantity} {ingredient.unit}</b>
+                  </label>
+                );
+              })}
+            </div>
+            <footer style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 8, borderTop: "1px solid #eef4fb", padding: 12 }}>
+              <button type="button" onClick={() => setIngredientProduct(null)} style={{ minHeight: 42, border: "1px solid #d9e8f7", borderRadius: 12, background: "#fff", color: "#17416f", fontSize: 13, fontWeight: 900 }}>ยกเลิก</button>
+              <button type="button" onClick={confirmIngredientProduct} style={{ minHeight: 42, border: 0, borderRadius: 12, background: "#1677d9", color: "#fff", fontSize: 13, fontWeight: 950 }}>เพิ่มสินค้า</button>
+            </footer>
           </section>
         </div>
       ) : null}
@@ -844,7 +908,7 @@ export function TakeawayCartShell({
           ) : null}
 
           {paymentView === "cash" ? (
-            <section style={{ position: "relative", height: "calc(100dvh - max(74px, env(safe-area-inset-bottom) + 66px))", display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto auto", gap: 6, maxWidth: 430, margin: "0 auto" }}>
+            <section style={{ position: "relative", height: "calc(100dvh - max(108px, env(safe-area-inset-bottom) + 96px))", display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto auto", gap: 7, maxWidth: 430, margin: "0 auto" }}>
               <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <div>
                   <h2 style={{ margin: 0, color: "#1d2430", fontSize: 20, fontWeight: 900, lineHeight: 1.12 }}>{LABELS.cashPaymentTitle}</h2>
@@ -854,49 +918,49 @@ export function TakeawayCartShell({
               </header>
 
               <div style={{ minHeight: 0, overflowY: "hidden", scrollbarWidth: "none", display: "grid", alignContent: "start", gap: 5 }}>
-                <div style={{ display: "grid", gap: 5, border: "1px solid #d9e8f7", borderRadius: 12, background: "#f8fbff", padding: "7px 10px" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "center" }}>
-                    <span style={{ color: "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.amountDue}</span>
-                    <b style={{ color: "#16a34a", fontSize: 27, fontWeight: 950, lineHeight: 1 }}>{BAHT}{money(totalAmount)}</b>
+                <div style={{ display: "grid", gap: 8, border: "1px solid #d9e8f7", borderRadius: 13, background: "#f8fbff", padding: "10px 12px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
+                    <span style={{ color: "#334155", fontSize: 13, fontWeight: 900 }}>{LABELS.amountDue}</span>
+                    <b style={{ color: "#16a34a", fontSize: 30, fontWeight: 950, lineHeight: 1 }}>{BAHT}{money(totalAmount)}</b>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "center", borderTop: "1px dashed #c9dbf2", paddingTop: 6 }}>
-                    <span style={{ color: "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.cashReceived}</span>
-                    <b style={{ color: "#1d4ed8", fontSize: 26, fontWeight: 950, lineHeight: 1 }}>{money(cashReceivedAmount)}</b>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center", borderTop: "1px dashed #c9dbf2", paddingTop: 8 }}>
+                    <span style={{ color: "#334155", fontSize: 13, fontWeight: 900 }}>{LABELS.cashReceived}</span>
+                    <b style={{ color: "#1d4ed8", fontSize: 29, fontWeight: 950, lineHeight: 1 }}>{money(cashReceivedAmount)}</b>
                   </div>
                 </div>
 
-                <div style={{ border: "1px solid #d9e8f7", borderRadius: 12, background: "#fff", padding: 7 }}>
-                  <p style={{ margin: "0 0 5px", color: "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.keypad}</p>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 54px", gap: 6 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+                <div style={{ border: "1px solid #d9e8f7", borderRadius: 12, background: "#fff", padding: 9, marginTop: 5 }}>
+                  <p style={{ margin: "0 0 7px", color: "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.keypad}</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 64px", gap: 8 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
                       {["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "00", "."].map((key) => (
-                        <button key={key} type="button" onClick={() => appendCashInput(key)} style={{ minHeight: 36, border: "1px solid #d9e8f7", borderRadius: 8, background: "#f8fbff", color: "#111827", fontSize: 19, fontWeight: 900 }}>{key}</button>
+                        <button key={key} type="button" onClick={() => appendCashInput(key)} style={{ minHeight: 48, border: "1px solid #d9e8f7", borderRadius: 9, background: "#f8fbff", color: "#111827", fontSize: 21, fontWeight: 900 }}>{key}</button>
                       ))}
                     </div>
-                    <div style={{ display: "grid", gridTemplateRows: "1fr 1fr", gap: 6 }}>
-                      <button type="button" onClick={deleteCashInput} style={{ minHeight: 36, border: "1px solid #d9e8f7", borderRadius: 8, background: "#eef6ff", color: "#0f2745", fontSize: 11, fontWeight: 900 }}>{LABELS.delete}</button>
-                      <button type="button" onClick={() => setCashReceivedInput("")} style={{ minHeight: 36, border: 0, borderRadius: 8, background: "#164aa6", color: "#fff", fontSize: 11, fontWeight: 900 }}>{LABELS.clear}</button>
+                    <div style={{ display: "grid", gridTemplateRows: "1fr 1fr", gap: 8 }}>
+                      <button type="button" onClick={deleteCashInput} style={{ minHeight: 48, border: "1px solid #d9e8f7", borderRadius: 9, background: "#eef6ff", color: "#0f2745", fontSize: 11, fontWeight: 900 }}>{LABELS.delete}</button>
+                      <button type="button" onClick={() => setCashReceivedInput("")} style={{ minHeight: 48, border: 0, borderRadius: 9, background: "#164aa6", color: "#fff", fontSize: 11, fontWeight: 900 }}>{LABELS.clear}</button>
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gap: 5 }}>
+                <div style={{ display: "grid", gap: 7, justifyItems: "center" }}>
                   <span style={{ color: "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.quickCash}</span>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 96px))", justifyContent: "center", gap: 6 }}>
+                  <div style={{ display: "grid", width: "min(100%, 372px)", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", justifyContent: "center", gap: 8 }}>
                     {[500, 1000, 1500].map((amount) => (
-                      <button key={amount} type="button" onClick={() => setCashReceivedInput(String(amount))} style={{ minHeight: 32, border: "1px solid #b9d7ff", borderRadius: 8, background: "#eaf4ff", color: "#1d4ed8", fontSize: 10, fontWeight: 900 }}>{BAHT}{amount.toLocaleString("th-TH")}.00</button>
+                      <button key={amount} type="button" onClick={() => setCashReceivedInput(String(amount))} style={{ minHeight: 38, border: "1px solid #b9d7ff", borderRadius: 8, background: "#eaf4ff", color: "#1d4ed8", fontSize: 10, fontWeight: 900 }}>{BAHT}{amount.toLocaleString("th-TH")}.00</button>
                     ))}
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "center", border: "1px solid #d9e8f7", borderRadius: 11, background: "#f8fbff", padding: "6px 10px" }}>
-                    <span style={{ color: "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.change}</span>
-                    <b style={{ color: "#16a34a", fontSize: 22, fontWeight: 950, lineHeight: 1 }}>{BAHT}{money(cashChangeAmount)}</b>
+                  <div style={{ display: "grid", width: "min(100%, 414px)", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center", border: "1px solid #d9e8f7", borderRadius: 12, background: "#f8fbff", padding: "8px 12px" }}>
+                    <span style={{ color: "#334155", fontSize: 13, fontWeight: 900 }}>{LABELS.change}</span>
+                    <b style={{ color: "#16a34a", fontSize: 26, fontWeight: 950, lineHeight: 1 }}>{BAHT}{money(cashChangeAmount)}</b>
                   </div>
                 </div>
               </div>
 
-              <footer style={{ display: "grid", gridTemplateColumns: "82px minmax(0, 216px)", justifyContent: "center", gap: 8, alignItems: "center" }}>
-                <button type="button" onClick={() => setPaymentView("choose")} style={{ minHeight: 38, border: "1px solid #fecaca", borderRadius: 8, background: "#fff1f1", color: "#b91c1c", fontSize: 11, fontWeight: 900 }}>{LABELS.cancelBill}</button>
-                <button type="button" onClick={() => checkout("cash")} disabled={Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount} style={{ display: "flex", minHeight: 38, alignItems: "center", justifyContent: "center", gap: 8, border: 0, borderRadius: 8, background: Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount ? "#7aa3e8" : "#164aa6", color: "#fff", fontSize: 12, fontWeight: 950 }}>{paymentSubmitting === "cash" ? "..." : <><span>{LABELS.confirmPayment}</span><CheckCircle2 size={14} /></>}</button>
+              <footer style={{ display: "grid", gridTemplateColumns: "88px minmax(0, 232px)", justifyContent: "center", gap: 10, alignItems: "center", paddingBottom: 24, transform: "translateY(-10px)" }}>
+                <button type="button" onClick={() => setPaymentView("choose")} style={{ minHeight: 44, border: "1px solid #fecaca", borderRadius: 9, background: "#fff1f1", color: "#b91c1c", fontSize: 11, fontWeight: 900 }}>{LABELS.cancelBill}</button>
+                <button type="button" onClick={() => checkout("cash")} disabled={Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", gap: 9, border: 0, borderRadius: 9, background: Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount ? "#7aa3e8" : "#164aa6", color: "#fff", fontSize: 13, fontWeight: 950 }}>{paymentSubmitting === "cash" ? "..." : <><span>{LABELS.confirmPayment}</span><CheckCircle2 size={15} /></>}</button>
               </footer>
               {paymentError ? <p style={{ margin: 0, color: "#d62929", fontSize: 12, fontWeight: 800 }}>{paymentError}</p> : null}
               {paymentSubmitting === "cash" ? (
@@ -968,9 +1032,12 @@ export function TakeawayCartShell({
             <section style={{ height: "calc(100dvh - max(18px, env(safe-area-inset-bottom)))", display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto", gap: 7, maxWidth: 430, margin: "0 auto" }}>
               <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <h2 style={{ margin: 0, color: "#1d2430", fontSize: 19, fontWeight: 900 }}>{LABELS.receiptTitle}</h2>
-                <button type="button" onClick={closeReceiptWindow} style={{ minWidth: 72, minHeight: 36, border: "1px solid #d9e8f7", borderRadius: 9, background: "#fff", color: "#0f2745", fontSize: 12, fontWeight: 800 }}>{LABELS.closeWindow}</button>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button type="button" onClick={printReceiptAndClose} style={{ minWidth: 86, minHeight: 38, border: 0, borderRadius: 9, background: "#ff681f", color: "#fff", fontSize: 12, fontWeight: 950 }}>{LABELS.printReceipt}</button>
+                  <button type="button" onClick={closeReceiptWindow} style={{ minWidth: 72, minHeight: 38, border: "1px solid #d9e8f7", borderRadius: 9, background: "#fff", color: "#0f2745", fontSize: 12, fontWeight: 800 }}>{LABELS.closeWindow}</button>
+                </div>
               </header>
-              <div style={{ minHeight: 0, maxHeight: "calc(100dvh - 126px)", overflowY: "auto", scrollbarWidth: "none", border: "1px solid #d9e8f7", borderRadius: 10, background: "#fff", padding: 8 }}>
+              <div style={{ minHeight: 0, maxHeight: "calc(100dvh - 134px)", overflowY: "auto", scrollbarWidth: "none", border: "1px solid #d9e8f7", borderRadius: 10, background: "#fff", padding: 8 }}>
                 <div style={{ textAlign: "center", borderBottom: "1px dashed #c9dbf2", paddingBottom: 6 }}>
                   <Image src={receiptStoreProfile.logoUrl || "/brand/cpipos-symbol.png"} alt={receiptStoreProfile.displayName || "CpIPOS"} width={28} height={28} unoptimized style={{ width: 20, height: 20, objectFit: "contain" }} />
                   <h3 style={{ margin: "3px 0 0", color: "#111827", fontSize: 15, fontWeight: 950 }}>{receiptStoreProfile.displayName || LABELS.storeName}</h3>
@@ -1004,9 +1071,21 @@ export function TakeawayCartShell({
                   <div style={{ display: "grid", gridTemplateColumns: "1fr auto" }}><span>{LABELS.change}</span><b>{BAHT}{money(receipt.change)}</b></div>
                 </div>
               </div>
-              <button type="button" onClick={printReceiptAndClose} style={{ width: "min(142px, 44vw)", justifySelf: "start", minHeight: 40, border: 0, borderRadius: 9, background: "#ff681f", color: "#fff", fontSize: 13, fontWeight: 950 }}>{LABELS.printReceipt}</button>
+              <footer style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <button type="button" onClick={printReceiptAndClose} style={{ minHeight: 42, border: 0, borderRadius: 9, background: "#ff681f", color: "#fff", fontSize: 13, fontWeight: 950 }}>{LABELS.printReceipt}</button>
+                <button type="button" onClick={closeReceiptWindow} style={{ minHeight: 42, border: "1px solid #d9e8f7", borderRadius: 9, background: "#fff", color: "#0f2745", fontSize: 13, fontWeight: 900 }}>{LABELS.closeWindow}</button>
+              </footer>
             </section>
           ) : null}
+        </div>
+      ) : null}
+
+      {holdSubmitting ? (
+        <div role="alertdialog" aria-modal="true" aria-label="กำลังพักบิล" style={{ position: "fixed", inset: 0, zIndex: 90, display: "grid", placeItems: "center", background: "rgba(15,23,42,0.35)", backdropFilter: "blur(4px)", padding: 24 }}>
+          <div style={{ display: "grid", justifyItems: "center", gap: 14, width: "min(360px, 100%)", borderRadius: 12, background: "#fff", padding: "28px 22px", color: "#0f2745", fontSize: 15, fontWeight: 900, boxShadow: "0 18px 48px rgba(15,39,69,0.22)" }}>
+            <span style={{ width: 36, height: 36, border: "3px solid #d9e8f7", borderTopColor: "#f59e0b", borderRadius: 999, animation: "posSpin 0.8s linear infinite" }} />
+            กำลังพักบิล...
+          </div>
         </div>
       ) : null}
 
@@ -1022,10 +1101,13 @@ export function TakeawayCartShell({
             <p style={{ margin: "8px 0 0", color: "#7a8fa8", fontSize: 12, fontWeight: 700 }}>{activeOrderNo}</p>
             <label style={{ display: "grid", gap: 6, marginTop: 12, color: "#7a8fa8", fontSize: 11, fontWeight: 800 }}>
               {LABELS.enterPin}
-              <input value={holdPin} onChange={(event) => setHoldPin(event.target.value)} type="password" inputMode="numeric" autoComplete="off" style={{ minHeight: 46, border: "1px solid #ffd7d7", borderRadius: 12, padding: "0 12px", color: "#0f2745", fontSize: 16, fontWeight: 900, outline: "none" }} />
+              <input id="cancel-bill-pin" value={holdPin} onChange={(event) => setHoldPin(normalizeSixDigitPin(event.target.value))} type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoComplete="one-time-code" style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }} />
+              <button type="button" onClick={() => document.getElementById("cancel-bill-pin")?.focus()} style={{ border: 0, background: "transparent", padding: 0, textAlign: "initial" }}>
+                <PinDigits value={holdPin} />
+              </button>
             </label>
             {holdError ? <p style={{ margin: "8px 0 0", color: "#d62929", fontSize: 12, fontWeight: 800 }}>{holdError}</p> : null}
-            <button type="button" onClick={cancelBill} disabled={!holdPin.trim() || holdLoading} style={{ width: "100%", minHeight: 46, marginTop: 12, border: 0, borderRadius: 13, background: !holdPin.trim() || holdLoading ? "#f2a6a6" : "#d62929", color: "#fff", fontSize: 14, fontWeight: 900 }}>
+            <button type="button" onClick={cancelBill} disabled={holdPin.length !== 6 || holdLoading} style={{ width: "100%", minHeight: 46, marginTop: 12, border: 0, borderRadius: 13, background: holdPin.length !== 6 || holdLoading ? "#f2a6a6" : "#d62929", color: "#fff", fontSize: 14, fontWeight: 900 }}>
               {holdLoading ? "..." : LABELS.cancelBill}
             </button>
           </section>

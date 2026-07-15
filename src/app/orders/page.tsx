@@ -14,6 +14,13 @@ function statusLabel(status: string | null | undefined) {
   return status ?? "-";
 }
 
+function orderTypeLabel(type: string | null | undefined) {
+  if (type === "takeaway") return "กลับบ้าน";
+  if (type === "dine_in") return "โต๊ะ";
+  if (type === "delivery") return "เดลิเวอรี่";
+  return type ?? "order";
+}
+
 export default async function OrdersPage() {
   const { scope, shift } = await requireOpenShift("sales:list:view");
   const supabase = createServiceClient();
@@ -29,21 +36,23 @@ export default async function OrdersPage() {
   return (
     <MobileAppShell title="รายการขาย" scope={scope}>
       <section className="grid gap-3">
-        {(orders ?? []).length ? (orders ?? []).map((order) => (
-          <article key={order.id} className="card p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="m-0 text-xs font-semibold text-[#7a8fa8]">{order.order_type ?? "order"}</p>
-                <h2 className="m-0 mt-1 truncate text-base font-bold text-[#0f2745]">{order.order_no}</h2>
-                <p className="m-0 mt-1 text-xs text-[#7a8fa8]">{order.created_at ? new Date(order.created_at).toLocaleString("th-TH") : "-"}</p>
+        {(orders ?? []).length ? (
+          (orders ?? []).map((order) => (
+            <article key={order.id} className="card p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="m-0 text-xs font-semibold text-[#7a8fa8]">{orderTypeLabel(order.order_type)}</p>
+                  <h2 className="m-0 mt-1 truncate text-base font-bold text-[#0f2745]">{order.order_no}</h2>
+                  <p className="m-0 mt-1 text-xs text-[#7a8fa8]">{order.created_at ? new Date(order.created_at).toLocaleString("th-TH") : "-"}</p>
+                </div>
+                <div className="text-right">
+                  <b className="block text-base text-[#1677d9]">{money(order.grand_total ?? order.total_amount)} ฿</b>
+                  <span className="mt-1 inline-flex rounded-full bg-[#eef6ff] px-2 py-1 text-[10px] font-bold text-[#17416f]">{statusLabel(order.status)}</span>
+                </div>
               </div>
-              <div className="text-right">
-                <b className="block text-base text-[#1677d9]">{money(order.grand_total ?? order.total_amount)} ฿</b>
-                <span className="mt-1 inline-flex rounded-full bg-[#eef6ff] px-2 py-1 text-[10px] font-bold text-[#17416f]">{statusLabel(order.status)}</span>
-              </div>
-            </div>
-          </article>
-        )) : (
+            </article>
+          ))
+        ) : (
           <div className="card p-4 text-sm text-[#587398]">ยังไม่มีรายการขายในกะนี้</div>
         )}
       </section>

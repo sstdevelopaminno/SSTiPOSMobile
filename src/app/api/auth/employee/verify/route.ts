@@ -8,9 +8,13 @@ export async function POST(request: Request) {
   try {
     const flow = await readMobileFlow();
     if (!flow) return fail("context_expired", "เซสชันเข้าสู่ระบบหมดอายุ", 401);
+
     const body = employeeVerifySchema.safeParse(await request.json().catch(() => ({})));
-    if (!body.success) return fail("invalid_input", "ข้อมูลพนักงานไม่ถูกต้อง", 422);
-    if (!checkRateLimit(`employee:${flow.tenantId}:${flow.branchId ?? "none"}:${body.data.employeeCode}`)) return fail("rate_limited", "ลองใหม่อีกครั้งภายหลัง", 429);
+    if (!body.success) return fail("invalid_input", "รหัสพนักงานต้องเป็นตัวเลขเท่านั้น", 422);
+
+    if (!checkRateLimit(`employee:${flow.tenantId}:${flow.branchId ?? "none"}:${body.data.employeeCode}`)) {
+      return fail("rate_limited", "ลองใหม่อีกครั้งภายหลัง", 429);
+    }
 
     const result = await verifyEmployeeCode(flow, body.data.employeeCode);
     if (!result || !flow.branchId) return fail("invalid_credentials", "รหัสพนักงานไม่ถูกต้อง", 401);

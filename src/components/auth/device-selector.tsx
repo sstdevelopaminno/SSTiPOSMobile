@@ -3,7 +3,7 @@
 import { LoadingDialog } from "@/components/auth/loading-dialog";
 import { Monitor, Store } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Device = {
   id: string;
@@ -28,11 +28,20 @@ function networkErrorMessage(error: unknown, fallback: string) {
 
 export function DeviceSelector({ branchName, devices }: { branchName: string; devices: Device[] }) {
   const router = useRouter();
+  const navigationWatchdogRef = useRef<number | null>(null);
   const [selectedId, setSelectedId] = useState(devices[0]?.id ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const selectedDevice = useMemo(() => devices.find((device) => device.id === selectedId), [devices, selectedId]);
   const canSubmit = Boolean(selectedDevice) && !loading;
+
+  useEffect(() => {
+    router.prefetch("/shifts");
+    router.prefetch("/sales");
+    return () => {
+      if (navigationWatchdogRef.current) window.clearTimeout(navigationWatchdogRef.current);
+    };
+  }, [router]);
 
   async function submit() {
     if (!canSubmit) return;
@@ -42,15 +51,19 @@ export function DeviceSelector({ branchName, devices }: { branchName: string; de
     try {
       const res = await fetch("/api/auth/devices/select", {
         method: "POST",
-        headers: { "Accept": "application/json", "Content-Type": "application/json" },
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
         cache: "no-store",
         credentials: "same-origin",
-        body: JSON.stringify({ deviceId: selectedId })
+        body: JSON.stringify({ deviceId: selectedId }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error?.message ?? "เลือกเครื่องแคชเชียร์ไม่สำเร็จ");
       keepLoadingForNavigation = true;
       router.push(json.data.redirectTo);
+      navigationWatchdogRef.current = window.setTimeout(() => {
+        setLoading(false);
+        setError("การเปลี่ยนหน้าช้ากว่าปกติ กรุณากดเปิดแคชอีกครั้ง");
+      }, 10_000);
     } catch (err) {
       setError(networkErrorMessage(err, "เลือกเครื่องแคชเชียร์ไม่สำเร็จ"));
     } finally {
@@ -77,7 +90,7 @@ export function DeviceSelector({ branchName, devices }: { branchName: string; de
                 <button
                   key={device.id}
                   type="button"
-                  className={`min-h-[132px] rounded-xl border p-3 text-left transition active:scale-[0.99] ${
+                  className={`min-h-[132px] touch-manipulation rounded-xl border p-3 text-left transition active:scale-[0.99] disabled:opacity-60 ${
                     active ? "border-[#1677ff] bg-[#eef6ff] shadow-sm" : "border-[#c9dbf2] bg-white"
                   }`}
                   onClick={() => setSelectedId(device.id)}
@@ -101,12 +114,12 @@ export function DeviceSelector({ branchName, devices }: { branchName: string; de
         </section>
 
         <div className="grid grid-cols-2 gap-3">
-          <button type="button" className="rounded-xl border border-[#bcd5f5] bg-white px-4 py-3 text-sm font-semibold text-[#17416f]" onClick={() => router.push("/login/employee")} disabled={loading}>
+          <button type="button" className="touch-manipulation rounded-xl border border-[#bcd5f5] bg-white px-4 py-3 text-sm font-semibold text-[#17416f]" onClick={() => router.push("/login/employee")} disabled={loading}>
             ย้อนกลับ
           </button>
           <button
             type="button"
-            className={`rounded-xl px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.99] disabled:cursor-not-allowed ${canSubmit ? "bg-[#1677d9] hover:bg-[#075fbb]" : "bg-[#aacdf3] opacity-80"}`}
+            className={`touch-manipulation rounded-xl px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.99] disabled:cursor-not-allowed ${canSubmit ? "bg-[#1677d9] hover:bg-[#075fbb]" : "bg-[#aacdf3] opacity-80"}`}
             onClick={submit}
             disabled={!canSubmit}
           >

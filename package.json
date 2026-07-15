@@ -4,13 +4,16 @@
     "private": true,
     "scripts": {
         "predev": "node scripts/clean-next-dev-cache.mjs",
-        "dev": "next dev",
+        "dev": "node scripts/dev-safe.mjs",
+        "dev:next": "node scripts/dev-safe.mjs",
+        "dev:raw": "next dev",
         "dev:turbo": "next dev --turbo",
         "dev:stable": "next start",
+        "prebuild": "node scripts/clean-next-dev-cache.mjs",
         "build": "next build",
         "start": "next start",
         "lint": "eslint .",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
         "test": "vitest run"
     },
     "dependencies": {

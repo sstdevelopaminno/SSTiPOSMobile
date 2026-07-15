@@ -43,7 +43,8 @@ export async function POST(request: Request) {
       .eq("tenant_id", scope.tenantId)
       .eq("branch_id", scope.branchId)
       .eq("order_type", "takeaway")
-      .eq("status", "held")
+      .eq("status", "draft")
+      .contains("metadata", { hold_state: "held" })
       .maybeSingle<{
         id: string;
         order_no: string;
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
         metadata: {
           source_app: "mobile_web",
           mode: "takeaway",
+          hold_state: "active",
           restored_from: "mobile_held_list",
           restored_by: scope.userId,
           restored_at: nowIso,
@@ -85,7 +87,7 @@ export async function POST(request: Request) {
       .eq("id", order.id)
       .eq("tenant_id", scope.tenantId)
       .eq("branch_id", scope.branchId)
-      .eq("status", "held");
+      .eq("status", "draft");
     if (updateError) throw new Error(updateError.message);
 
     return ok({

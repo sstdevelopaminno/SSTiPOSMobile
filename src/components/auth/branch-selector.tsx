@@ -3,7 +3,7 @@
 import { LoadingDialog } from "@/components/auth/loading-dialog";
 import { Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Branch = { id: string; name: string | null; code: string | null };
 
@@ -16,10 +16,18 @@ function networkErrorMessage(error: unknown, fallback: string) {
 
 export function BranchSelector({ branches }: { branches: Branch[] }) {
   const router = useRouter();
+  const navigationWatchdogRef = useRef<number | null>(null);
   const [selectedId, setSelectedId] = useState(branches[0]?.id ?? "");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const canSubmit = Boolean(selectedId) && !loading;
+
+  useEffect(() => {
+    router.prefetch("/login/employee");
+    return () => {
+      if (navigationWatchdogRef.current) window.clearTimeout(navigationWatchdogRef.current);
+    };
+  }, [router]);
 
   async function submit() {
     if (!canSubmit) return;
@@ -29,15 +37,19 @@ export function BranchSelector({ branches }: { branches: Branch[] }) {
     try {
       const res = await fetch("/api/auth/branches/select", {
         method: "POST",
-        headers: { "Accept": "application/json", "Content-Type": "application/json" },
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
         cache: "no-store",
         credentials: "same-origin",
-        body: JSON.stringify({ branchId: selectedId })
+        body: JSON.stringify({ branchId: selectedId }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error?.message ?? "เลือกสาขาไม่สำเร็จ");
       keepLoadingForNavigation = true;
       router.push(json.data.redirectTo);
+      navigationWatchdogRef.current = window.setTimeout(() => {
+        setLoading(false);
+        setError("การเปลี่ยนหน้าช้ากว่าปกติ กรุณากดถัดไปอีกครั้ง");
+      }, 10_000);
     } catch (err) {
       setError(networkErrorMessage(err, "เลือกสาขาไม่สำเร็จ"));
     } finally {
@@ -57,7 +69,7 @@ export function BranchSelector({ branches }: { branches: Branch[] }) {
                 <button
                   key={branch.id}
                   type="button"
-                  className={`flex min-h-[88px] w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition active:scale-[0.99] disabled:opacity-60 ${
+                  className={`flex min-h-[88px] w-full touch-manipulation items-center gap-3 rounded-xl border px-3 py-3 text-left transition active:scale-[0.99] disabled:opacity-60 ${
                     active ? "border-[#1677ff] bg-[#eef6ff]" : "border-[#c9dbf2] bg-white"
                   }`}
                   disabled={loading}
@@ -77,12 +89,12 @@ export function BranchSelector({ branches }: { branches: Branch[] }) {
           {branches.length === 0 ? <p className="text-sm text-slate-500">ไม่พบสาขาที่พร้อมใช้งาน</p> : null}
         </section>
         <div className="grid grid-cols-2 gap-3">
-          <button type="button" className="rounded-xl border border-[#bcd5f5] bg-white px-4 py-3 text-sm font-semibold text-[#17416f]" onClick={() => router.push("/login/store")} disabled={loading}>
-            ออกจากระบบ
+          <button type="button" className="touch-manipulation rounded-xl border border-[#bcd5f5] bg-white px-4 py-3 text-sm font-semibold text-[#17416f]" onClick={() => router.push("/login/store")} disabled={loading}>
+            กลับ
           </button>
           <button
             type="button"
-            className={`rounded-xl px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.99] disabled:cursor-not-allowed ${canSubmit ? "bg-[#1677d9] hover:bg-[#075fbb]" : "bg-[#aacdf3] opacity-80"}`}
+            className={`touch-manipulation rounded-xl px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.99] disabled:cursor-not-allowed ${canSubmit ? "bg-[#1677d9] hover:bg-[#075fbb]" : "bg-[#aacdf3] opacity-80"}`}
             onClick={submit}
             disabled={!canSubmit}
           >

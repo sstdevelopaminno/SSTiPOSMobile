@@ -30,21 +30,23 @@ export default async function DeliverySalesPage() {
   return (
     <MobileAppShell title="เดลิเวอรี่" subtitle="ออเดอร์ส่งในกะนี้" scope={scope}>
       <section className="grid gap-3">
-        {(orders ?? []).length ? (orders ?? []).map((order) => (
-          <article key={order.id} className="card p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="m-0 text-xs font-semibold text-[#7a8fa8]">{order.external_order_code ?? "delivery"}</p>
-                <h2 className="m-0 mt-1 truncate text-base font-bold text-[#0f2745]">{order.order_no}</h2>
-                <p className="m-0 mt-1 text-xs text-[#587398]">{order.customer_name ?? "ไม่ระบุลูกค้า"}</p>
+        {(orders ?? []).length ? (
+          (orders ?? []).map((order) => (
+            <article key={order.id} className="card p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="m-0 text-xs font-semibold text-[#7a8fa8]">{order.external_order_code ?? "delivery"}</p>
+                  <h2 className="m-0 mt-1 truncate text-base font-bold text-[#0f2745]">{order.order_no}</h2>
+                  <p className="m-0 mt-1 text-xs text-[#587398]">{order.customer_name ?? "ไม่ระบุลูกค้า"}</p>
+                </div>
+                <div className="text-right">
+                  <b className="block text-base text-[#1677d9]">{money(order.grand_total ?? order.total_amount)} ฿</b>
+                  <span className="mt-1 inline-flex rounded-full bg-[#fff6e8] px-2 py-1 text-[10px] font-bold text-[#9a5b00]">{deliveryStatus(order.delivery_status)}</span>
+                </div>
               </div>
-              <div className="text-right">
-                <b className="block text-base text-[#1677d9]">{money(order.grand_total ?? order.total_amount)} ฿</b>
-                <span className="mt-1 inline-flex rounded-full bg-[#fff6e8] px-2 py-1 text-[10px] font-bold text-[#9a5b00]">{deliveryStatus(order.delivery_status)}</span>
-              </div>
-            </div>
-          </article>
-        )) : (
+            </article>
+          ))
+        ) : (
           <div className="card p-4 text-sm text-[#587398]">ยังไม่มีออเดอร์เดลิเวอรี่ในกะนี้</div>
         )}
       </section>

@@ -6,5 +6,5 @@ Authoritative rules:
 - Do not create a second database.
 - Do not trust client tenant/branch/user/device/role/permission/package values.
 - Service role key is server-only.
-- Feature gates are server-enforced.
+- Feature metadata is resolved server-side; paid/package feature enforcement must be applied on every protected route/API before enabling new paid features.
 - UI targets mobile widths 360px, 390px, 430px first.

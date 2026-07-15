@@ -34,13 +34,15 @@ export default async function TableSalesPage() {
   return (
     <MobileAppShell title="เลือกโต๊ะ" subtitle="เปิดโต๊ะลูกค้า" scope={scope}>
       <section className="grid grid-cols-2 gap-3">
-        {(tables ?? []).length ? (tables ?? []).map((table) => (
-          <article key={table.id} className={`min-h-[104px] rounded-2xl border p-4 shadow-sm ${tableTone(table.status)}`}>
-            <p className="m-0 text-xs font-semibold opacity-75">โต๊ะ</p>
-            <h2 className="m-0 mt-1 text-xl font-black">{table.table_name ?? table.table_code}</h2>
-            <p className="m-0 mt-2 text-xs font-semibold">ที่นั่ง {table.capacity ?? 0} · {statusLabel(table.status)}</p>
-          </article>
-        )) : (
+        {(tables ?? []).length ? (
+          (tables ?? []).map((table) => (
+            <article key={table.id} className={`min-h-[104px] rounded-2xl border p-4 shadow-sm ${tableTone(table.status)}`}>
+              <p className="m-0 text-xs font-semibold opacity-75">โต๊ะ</p>
+              <h2 className="m-0 mt-1 text-xl font-black">{table.table_name ?? table.table_code}</h2>
+              <p className="m-0 mt-2 text-xs font-semibold">ที่นั่ง {table.capacity ?? 0} คน · {statusLabel(table.status)}</p>
+            </article>
+          ))
+        ) : (
           <div className="card col-span-2 p-4 text-sm text-[#587398]">ยังไม่มีผังโต๊ะในสาขานี้</div>
         )}
       </section>

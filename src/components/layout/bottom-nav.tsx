@@ -32,7 +32,8 @@ export function BottomNav({ role }: { role: BranchRole }) {
             <Link
               key={href}
               href={href}
-              className={`flex min-h-[64px] flex-col items-center justify-center gap-1 px-1 text-center text-[11px] font-semibold leading-tight transition active:text-[#1677d9] ${active ? "text-[#1677d9]" : "text-[#53657c]"}`}
+              prefetch
+              className={`flex min-h-[64px] touch-manipulation flex-col items-center justify-center gap-1 px-1 text-center text-[11px] font-semibold leading-tight transition active:bg-[#f5faff] active:text-[#1677d9] ${active ? "text-[#1677d9]" : "text-[#53657c]"}`}
               style={{
                 display: "flex",
                 minHeight: 64,

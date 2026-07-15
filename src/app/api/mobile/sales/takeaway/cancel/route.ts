@@ -95,18 +95,29 @@ export async function POST(request: Request) {
 
     const supabase = createServiceClient();
     const nowIso = new Date().toISOString();
-    const { data, error } = await supabase
+    const { data: order, error: orderLookupError } = await supabase
       .from("orders")
-      .update({
-        status: "cancelled",
-        updated_at: nowIso,
-        metadata: { source_app: "mobile_web", mode: "takeaway", voided_from: "mobile_takeaway", voided_by: scope.userId, voided_at: nowIso },
-      })
+      .select("id,order_no,metadata")
       .eq("id", body.data.orderId)
       .eq("tenant_id", scope.tenantId)
       .eq("branch_id", scope.branchId)
       .eq("pos_session_id", scope.sessionId)
       .eq("order_type", "takeaway")
+      .eq("status", "draft")
+      .maybeSingle<{ id: string; order_no: string; metadata: Record<string, unknown> | null }>();
+    if (orderLookupError) throw new Error(orderLookupError.message);
+    if (!order) return fail("order_not_found", "\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e1a\u0e34\u0e25 draft \u0e2a\u0e33\u0e2b\u0e23\u0e31\u0e1a\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01", 404);
+
+    const { data, error } = await supabase
+      .from("orders")
+      .update({
+        status: "cancelled",
+        updated_at: nowIso,
+        metadata: { ...(order.metadata ?? {}), source_app: "mobile_web", mode: "takeaway", hold_state: "cancelled", voided_from: "mobile_takeaway", voided_by: scope.userId, voided_at: nowIso },
+      })
+      .eq("id", order.id)
+      .eq("tenant_id", scope.tenantId)
+      .eq("branch_id", scope.branchId)
       .eq("status", "draft")
       .select("id,order_no")
       .maybeSingle<{ id: string; order_no: string }>();

@@ -10,6 +10,22 @@ type ProductRow = {
   category: string | null;
   price: number | null;
   sell_unit: string | null;
+  metadata?: {
+    ingredients?: RawIngredientOption[];
+    recipe?: RawIngredientOption[];
+  } | null;
+};
+
+type RawIngredientOption = {
+  id?: string | null;
+  ingredient_id?: string | null;
+  name?: string | null;
+  quantity?: number | string | null;
+  qty?: number | string | null;
+  unit?: string | null;
+  base_unit?: string | null;
+  selected?: boolean | null;
+  enabled?: boolean | null;
 };
 
 type CategoryRow = {
@@ -20,6 +36,12 @@ type CategoryRow = {
 type DraftOrderRow = {
   id: string;
   order_no: string;
+  metadata?: Record<string, unknown> | null;
+};
+
+type DraftItemRow = {
+  product_id: string | null;
+  quantity: number | null;
 };
 
 type TenantStoreProfileRow = {
@@ -38,6 +60,23 @@ type BranchRow = {
 const ALL_CATEGORY = "\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14";
 const OTHER_CATEGORY = "\u0e2d\u0e37\u0e48\u0e19\u0e46";
 const LABEL_FALLBACK_STORE = "\u0e23\u0e49\u0e32\u0e19\u0e04\u0e49\u0e32";
+
+function normalizeIngredientOptions(product: ProductRow) {
+  const raw = product.metadata?.ingredients ?? product.metadata?.recipe ?? [];
+  return raw
+    .map((item, index) => {
+      const name = String(item.name ?? "").trim();
+      if (!name) return null;
+      return {
+        id: String(item.id ?? item.ingredient_id ?? `${product.id}-${index}`),
+        name,
+        quantity: Number(item.quantity ?? item.qty ?? 1),
+        unit: String(item.unit ?? item.base_unit ?? ""),
+        selected: item.selected ?? item.enabled ?? true,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+}
 
 function orderNumber() {
   const stamp = new Date().toISOString().replace(/\D/g, "").slice(0, 14);
@@ -58,14 +97,14 @@ export default async function TakeawaySalesPage() {
       .order("name", { ascending: true }),
     supabase
       .from("products")
-      .select("id,sku,name,category,price,sell_unit")
+      .select("id,sku,name,category,price,sell_unit,metadata")
       .eq("tenant_id", scope.tenantId)
       .eq("branch_id", scope.branchId)
       .eq("is_active", true)
       .order("name", { ascending: true }),
     supabase
       .from("orders")
-      .select("id,order_no")
+      .select("id,order_no,metadata")
       .eq("tenant_id", scope.tenantId)
       .eq("branch_id", scope.branchId)
       .eq("shift_id", shift.id)
@@ -74,8 +113,7 @@ export default async function TakeawaySalesPage() {
       .eq("order_type", "takeaway")
       .eq("status", "draft")
       .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle<DraftOrderRow>(),
+      .limit(10),
     supabase
       .from("tenants")
       .select("name,display_name,logo_url,company_address,contact_phone,owner_phone")
@@ -90,8 +128,9 @@ export default async function TakeawaySalesPage() {
   ]);
   if (draftLookupError) throw new Error(draftLookupError.message);
 
-  let orderId = existingDraft?.id;
-  let orderNo = existingDraft?.order_no;
+  const activeDraft = ((existingDraft ?? []) as DraftOrderRow[]).find((order) => order.metadata?.hold_state !== "held");
+  let orderId = activeDraft?.id;
+  let orderNo = activeDraft?.order_no;
   if (!orderId || !orderNo) {
     const { data: createdDraft, error: draftCreateError } = await supabase
       .from("orders")
@@ -123,6 +162,13 @@ export default async function TakeawaySalesPage() {
     orderNo = createdDraft.order_no;
   }
 
+  const { data: draftItems } = await supabase
+    .from("order_items")
+    .select("product_id,quantity")
+    .eq("tenant_id", scope.tenantId)
+    .eq("branch_id", scope.branchId)
+    .eq("order_id", orderId);
+
   const products: TakeawayProduct[] = ((productRows ?? []) as ProductRow[])
     .filter((product) => product.id && product.name)
     .map((product) => ({
@@ -132,7 +178,19 @@ export default async function TakeawaySalesPage() {
       category: String(product.category || OTHER_CATEGORY),
       price: Number(product.price ?? 0),
       sellUnit: product.sell_unit,
+      ingredients: normalizeIngredientOptions(product),
     }));
+  const productsById = new Map(products.map((product) => [product.id, product]));
+  const initialCart = ((draftItems ?? []) as DraftItemRow[])
+    .map((item) => {
+      if (!item.product_id) return null;
+      const product = productsById.get(item.product_id);
+      if (!product) return null;
+      const quantity = Number(item.quantity ?? 0);
+      if (quantity <= 0) return null;
+      return { ...product, quantity };
+    })
+    .filter((item): item is TakeawayProduct & { quantity: number } => Boolean(item));
 
   const categoryNames = new Set<string>();
   for (const category of (categoryRows ?? []) as CategoryRow[]) {
@@ -154,7 +212,7 @@ export default async function TakeawaySalesPage() {
 
   return (
     <MobileAppShell scope={scope}>
-      <TakeawayCartShell categories={categories} products={products} orderId={orderId} orderNo={orderNo} receiptStoreProfile={receiptStoreProfile} />
+      <TakeawayCartShell categories={categories} products={products} orderId={orderId} orderNo={orderNo} receiptStoreProfile={receiptStoreProfile} initialCart={initialCart} />
     </MobileAppShell>
   );
 }
