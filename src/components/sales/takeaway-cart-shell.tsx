@@ -388,7 +388,9 @@ export function TakeawayCartShell({
   function appendCashInput(value: string) {
     setCashReceivedInput((current) => {
       if (value === "." && current.includes(".")) return current;
-      const next = current === "0" && value !== "." ? value : `${current}${value}`;
+      const isAutoFilledAmount = current === totalAmount.toFixed(2);
+      const base = isAutoFilledAmount && value !== "." ? "" : current;
+      const next = base === "0" && value !== "." ? value : `${base}${value}`;
       return next.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1").slice(0, 12);
     });
   }

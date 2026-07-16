@@ -20,6 +20,7 @@
 - Lifted the cash payment action footer above the mobile bottom navigation safe area.
 - Changed cash keypad, delete, clear, and quick-cash buttons to respond on pointer release with duplicate-tap guarding for more reliable mobile taps.
 - Kept keyboard fallback for accessibility while avoiding duplicate pointer/click input.
+- Updated cash input behavior so the first keypad tap replaces the auto-filled due amount instead of requiring users to clear the field first.
 
 ## 2026-07-12
 
