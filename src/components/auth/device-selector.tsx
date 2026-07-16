@@ -36,12 +36,10 @@ export function DeviceSelector({ branchName, devices }: { branchName: string; de
   const canSubmit = Boolean(selectedDevice) && !loading;
 
   useEffect(() => {
-    router.prefetch("/shifts");
-    router.prefetch("/sales");
     return () => {
       if (navigationWatchdogRef.current) window.clearTimeout(navigationWatchdogRef.current);
     };
-  }, [router]);
+  }, []);
 
   async function submit() {
     if (!canSubmit) return;
@@ -59,7 +57,7 @@ export function DeviceSelector({ branchName, devices }: { branchName: string; de
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error?.message ?? "เลือกเครื่องแคชเชียร์ไม่สำเร็จ");
       keepLoadingForNavigation = true;
-      router.push(json.data.redirectTo);
+      window.location.assign(json.data.redirectTo);
       navigationWatchdogRef.current = window.setTimeout(() => {
         setLoading(false);
         setError("การเปลี่ยนหน้าช้ากว่าปกติ กรุณากดเปิดแคชอีกครั้ง");

@@ -3,6 +3,9 @@ import { EmployeeLoginForm } from "@/components/auth/employee-login-form";
 import { readMobileFlow } from "@/lib/auth/mobile-flow";
 import { redirect } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function EmployeePage() {
   const flow = await readMobileFlow();
   if (!flow) redirect("/login/store");

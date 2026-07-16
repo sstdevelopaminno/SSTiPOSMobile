@@ -23,11 +23,10 @@ export function BranchSelector({ branches }: { branches: Branch[] }) {
   const canSubmit = Boolean(selectedId) && !loading;
 
   useEffect(() => {
-    router.prefetch("/login/employee");
     return () => {
       if (navigationWatchdogRef.current) window.clearTimeout(navigationWatchdogRef.current);
     };
-  }, [router]);
+  }, []);
 
   async function submit() {
     if (!canSubmit) return;
@@ -45,7 +44,7 @@ export function BranchSelector({ branches }: { branches: Branch[] }) {
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error?.message ?? "เลือกสาขาไม่สำเร็จ");
       keepLoadingForNavigation = true;
-      router.push(json.data.redirectTo);
+      window.location.assign(json.data.redirectTo);
       navigationWatchdogRef.current = window.setTimeout(() => {
         setLoading(false);
         setError("การเปลี่ยนหน้าช้ากว่าปกติ กรุณากดถัดไปอีกครั้ง");

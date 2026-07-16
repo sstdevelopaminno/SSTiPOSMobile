@@ -242,7 +242,7 @@ export async function selectDeviceAndCreateSession(flow: MobileLoginFlow, device
     .eq("user_id", flow.userId)
     .eq("status", "active");
 
-  const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + getEnv().MOBILE_SESSION_TTL_HOURS * 60 * 60 * 1000).toISOString();
   const { data: session, error: sessionError } = await supabase
     .from("pos_sessions")
     .insert({

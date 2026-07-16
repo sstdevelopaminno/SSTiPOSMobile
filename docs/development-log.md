@@ -422,3 +422,18 @@
 - Applied the same six-digit numeric PIN control to held-bill cancellation from the held-bill popup.
 - Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
 
+## 2026-07-16 Login Flow Redirect Stability
+
+- Removed login-step route prefetching that could cache a redirect from `/login/branch`, `/login/employee`, or `/login/device` before the mobile login-flow cookie was written.
+- Changed successful store, branch, employee, and device transitions to use full-page navigation after the API response so the next server-rendered page always reads fresh cookies.
+- Marked the branch, employee, and device login pages as `force-dynamic` with `revalidate = 0` to prevent stale redirect decisions from being reused.
+- Per user instruction, this change was documented before any commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-16 Mobile SSO Session Restore
+
+- Added an active-session check endpoint at `/api/auth/session/current` so the store login page can restore an existing mobile session and continue to `/sales` or `/shifts`.
+- Protected routes now validate the signed mobile cookie against the backing `pos_sessions` row and refresh the cookie expiry when the DB session is still active.
+- Aligned created POS session expiry with `MOBILE_SESSION_TTL_HOURS` instead of a hard-coded 12-hour value.
+- Kept the store login code path available when no active session exists, while preventing normal reloads from unnecessarily dropping operators back to the first login step.
+- Per user instruction, this change was documented before commit/push/deploy; no release action was taken in this step.
+

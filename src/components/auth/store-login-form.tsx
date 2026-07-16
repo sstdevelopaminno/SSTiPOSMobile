@@ -2,7 +2,6 @@
 
 import { Store } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { LoadingDialog } from "@/components/auth/loading-dialog";
 
 const NAVIGATION_WATCHDOG_MS = 10_000;
@@ -102,7 +101,6 @@ function cacheBranchSelectionPayload(data: { tenant?: unknown; branches?: unknow
 }
 
 export function StoreLoginForm() {
-  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const serviceWorkerCleanupRef = useRef<Promise<void> | null>(null);
   const navigationWatchdogRef = useRef<number | null>(null);
@@ -112,8 +110,20 @@ export function StoreLoginForm() {
   const canSubmit = storeCode.trim().length > 0 && !loading;
 
   useEffect(() => {
-    router.prefetch("/login/branch");
-    router.prefetch("/login/employee");
+    let cancelled = false;
+    fetch("/api/auth/session/current", {
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
+      .then((response) => response.json().catch(() => null))
+      .then((json) => {
+        if (!cancelled && json?.data?.redirectTo) {
+          setLoading(true);
+          window.location.assign(json.data.redirectTo);
+        }
+      })
+      .catch(() => undefined);
     if ("serviceWorker" in navigator) {
       serviceWorkerCleanupRef.current = navigator.serviceWorker.getRegistrations()
         .then(async (registrations) => {
@@ -122,9 +132,10 @@ export function StoreLoginForm() {
         .catch(() => undefined);
     }
     return () => {
+      cancelled = true;
       if (navigationWatchdogRef.current) window.clearTimeout(navigationWatchdogRef.current);
     };
-  }, [router]);
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -145,7 +156,7 @@ export function StoreLoginForm() {
       const json = await readJsonResponse(res, "ตรวจสอบรหัสร้านไม่สำเร็จ");
       cacheBranchSelectionPayload(json.data);
       keepLoadingForNavigation = true;
-      router.push(json.data.nextStep === "branch" ? "/login/branch" : "/login/employee");
+      window.location.assign(json.data.nextStep === "branch" ? "/login/branch" : "/login/employee");
       navigationWatchdogRef.current = window.setTimeout(() => {
         setLoading(false);
         setError("การเปลี่ยนหน้าช้ากว่าปกติ กรุณากดถัดไปอีกครั้ง");

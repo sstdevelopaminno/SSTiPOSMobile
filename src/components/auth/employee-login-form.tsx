@@ -29,12 +29,11 @@ export function EmployeeLoginForm({ branchName }: { branchName: string }) {
   const canSubmit = employeeCode.trim().length > 0 && !loading;
 
   useEffect(() => {
-    router.prefetch("/login/device");
     return () => {
       if (navigationWatchdogRef.current) window.clearTimeout(navigationWatchdogRef.current);
       if (autoHideRef.current) window.clearTimeout(autoHideRef.current);
     };
-  }, [router]);
+  }, []);
 
   function revealTemporarily() {
     setShowCode((current) => {
@@ -65,7 +64,7 @@ export function EmployeeLoginForm({ branchName }: { branchName: string }) {
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error?.message ?? "เข้าสู่ระบบไม่สำเร็จ");
       keepLoadingForNavigation = true;
-      router.push(json.data.redirectTo);
+      window.location.assign(json.data.redirectTo);
       navigationWatchdogRef.current = window.setTimeout(() => {
         setLoading(false);
         setError("การเปลี่ยนหน้าช้ากว่าปกติ กรุณากดยืนยันอีกครั้ง");

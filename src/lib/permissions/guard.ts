@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
-import { readMobileSession } from "@/lib/auth/session";
+import { requireActiveMobileSession } from "@/lib/auth/session";
 import { roleCan } from "@/lib/permissions/mobile-features";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { BranchRole, MobilePermissionKey } from "@/types/contracts";
 
 export async function requireMobileSession(roles?: BranchRole[]) {
-  const session = await readMobileSession();
+  const session = await requireActiveMobileSession();
   if (!session) redirect("/login/store");
   if (roles && !roles.includes(session.role)) redirect("/orders?error=unauthorized");
   return session;
