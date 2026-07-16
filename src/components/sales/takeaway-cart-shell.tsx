@@ -241,6 +241,7 @@ export function TakeawayCartShell({
   const [activeCategory, setActiveCategory] = useState(categories[0]?.name ?? LABELS.all);
   const categoryScrollerRef = useRef<HTMLDivElement>(null);
   const addedNoticeTimerRef = useRef<number | null>(null);
+  const cashButtonTapRef = useRef(0);
 
   useEffect(() => {
     setActiveOrderId(orderId);
@@ -394,6 +395,13 @@ export function TakeawayCartShell({
 
   function deleteCashInput() {
     setCashReceivedInput((current) => current.slice(0, -1));
+  }
+
+  function runCashButton(action: () => void) {
+    const now = Date.now();
+    if (now - cashButtonTapRef.current < 90) return;
+    cashButtonTapRef.current = now;
+    action();
   }
 
   function clearPaidBillState() {
@@ -908,7 +916,7 @@ export function TakeawayCartShell({
           ) : null}
 
           {paymentView === "cash" ? (
-            <section style={{ position: "relative", height: "calc(100dvh - max(18px, env(safe-area-inset-bottom) + 10px))", display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto auto", gap: 7, maxWidth: 430, margin: "0 auto", pointerEvents: "auto", touchAction: "manipulation" }}>
+            <section style={{ position: "relative", minHeight: "100dvh", display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto", gap: 7, maxWidth: 430, margin: "0 auto", paddingBottom: "max(92px, env(safe-area-inset-bottom) + 86px)", pointerEvents: "auto", touchAction: "manipulation" }}>
               <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <div>
                   <h2 style={{ margin: 0, color: "#1d2430", fontSize: 20, fontWeight: 900, lineHeight: 1.12 }}>{LABELS.cashPaymentTitle}</h2>
@@ -917,7 +925,7 @@ export function TakeawayCartShell({
                 <button type="button" onClick={() => setPaymentView("choose")} style={{ minWidth: 38, minHeight: 38, border: "1px solid #d9e8f7", borderRadius: 9, background: "#fff", color: "#0f2745", fontSize: 12, fontWeight: 800 }}>{LABELS.close}</button>
               </header>
 
-              <div style={{ minHeight: 0, overflowY: "hidden", scrollbarWidth: "none", display: "grid", alignContent: "start", gap: 5 }}>
+              <div style={{ minHeight: 0, overflowY: "auto", scrollbarWidth: "none", display: "grid", alignContent: "start", gap: 5, paddingBottom: 8 }}>
                 <div style={{ display: "grid", gap: 8, border: "1px solid #d9e8f7", borderRadius: 13, background: "#f8fbff", padding: "10px 12px" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
                     <span style={{ color: "#334155", fontSize: 13, fontWeight: 900 }}>{LABELS.amountDue}</span>
@@ -934,12 +942,12 @@ export function TakeawayCartShell({
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 64px", gap: 8 }}>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
                       {["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "00", "."].map((key) => (
-                        <button key={key} type="button" onClick={() => appendCashInput(key)} style={{ minHeight: 48, border: "1px solid #d9e8f7", borderRadius: 9, background: "#f8fbff", color: "#111827", fontSize: 21, fontWeight: 900, pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}>{key}</button>
+                        <button key={key} type="button" onPointerUp={() => runCashButton(() => appendCashInput(key))} onClick={(event) => { if (event.detail === 0) runCashButton(() => appendCashInput(key)); }} style={{ minHeight: 48, border: "1px solid #d9e8f7", borderRadius: 9, background: "#f8fbff", color: "#111827", fontSize: 21, fontWeight: 900, pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent", cursor: "pointer", userSelect: "none" }}>{key}</button>
                       ))}
                     </div>
                     <div style={{ display: "grid", gridTemplateRows: "1fr 1fr", gap: 8 }}>
-                      <button type="button" onClick={deleteCashInput} style={{ minHeight: 48, border: "1px solid #d9e8f7", borderRadius: 9, background: "#eef6ff", color: "#0f2745", fontSize: 11, fontWeight: 900, pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}>{LABELS.delete}</button>
-                      <button type="button" onClick={() => setCashReceivedInput("")} style={{ minHeight: 48, border: 0, borderRadius: 9, background: "#164aa6", color: "#fff", fontSize: 11, fontWeight: 900, pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}>{LABELS.clear}</button>
+                      <button type="button" onPointerUp={() => runCashButton(deleteCashInput)} onClick={(event) => { if (event.detail === 0) runCashButton(deleteCashInput); }} style={{ minHeight: 48, border: "1px solid #d9e8f7", borderRadius: 9, background: "#eef6ff", color: "#0f2745", fontSize: 11, fontWeight: 900, pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent", cursor: "pointer", userSelect: "none" }}>{LABELS.delete}</button>
+                      <button type="button" onPointerUp={() => runCashButton(() => setCashReceivedInput(""))} onClick={(event) => { if (event.detail === 0) runCashButton(() => setCashReceivedInput("")); }} style={{ minHeight: 48, border: 0, borderRadius: 9, background: "#164aa6", color: "#fff", fontSize: 11, fontWeight: 900, pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent", cursor: "pointer", userSelect: "none" }}>{LABELS.clear}</button>
                     </div>
                   </div>
                 </div>
@@ -948,7 +956,7 @@ export function TakeawayCartShell({
                   <span style={{ color: "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.quickCash}</span>
                   <div style={{ display: "grid", width: "min(100%, 372px)", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", justifyContent: "center", gap: 8 }}>
                     {[500, 1000, 1500].map((amount) => (
-                      <button key={amount} type="button" onClick={() => setCashReceivedInput(String(amount))} style={{ minHeight: 38, border: "1px solid #b9d7ff", borderRadius: 8, background: "#eaf4ff", color: "#1d4ed8", fontSize: 10, fontWeight: 900, pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}>{BAHT}{amount.toLocaleString("th-TH")}.00</button>
+                      <button key={amount} type="button" onPointerUp={() => runCashButton(() => setCashReceivedInput(String(amount)))} onClick={(event) => { if (event.detail === 0) runCashButton(() => setCashReceivedInput(String(amount))); }} style={{ minHeight: 38, border: "1px solid #b9d7ff", borderRadius: 8, background: "#eaf4ff", color: "#1d4ed8", fontSize: 10, fontWeight: 900, pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent", cursor: "pointer", userSelect: "none" }}>{BAHT}{amount.toLocaleString("th-TH")}.00</button>
                     ))}
                   </div>
                   <div style={{ display: "grid", width: "min(100%, 414px)", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center", border: "1px solid #d9e8f7", borderRadius: 12, background: "#f8fbff", padding: "8px 12px" }}>
@@ -958,7 +966,7 @@ export function TakeawayCartShell({
                 </div>
               </div>
 
-              <footer style={{ display: "grid", gridTemplateColumns: "88px minmax(0, 232px)", justifyContent: "center", gap: 10, alignItems: "center", paddingBottom: 24, transform: "translateY(-10px)" }}>
+              <footer style={{ position: "fixed", right: 0, bottom: "max(72px, env(safe-area-inset-bottom) + 68px)", left: 0, zIndex: 210, display: "grid", gridTemplateColumns: "88px minmax(0, 232px)", justifyContent: "center", gap: 10, alignItems: "center", padding: "0 14px", pointerEvents: "auto" }}>
                 <button type="button" onClick={() => setPaymentView("choose")} style={{ minHeight: 44, border: "1px solid #fecaca", borderRadius: 9, background: "#fff1f1", color: "#b91c1c", fontSize: 11, fontWeight: 900 }}>{LABELS.cancelBill}</button>
                 <button type="button" onClick={() => checkout("cash")} disabled={Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", gap: 9, border: 0, borderRadius: 9, background: Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount ? "#7aa3e8" : "#164aa6", color: "#fff", fontSize: 13, fontWeight: 950 }}>{paymentSubmitting === "cash" ? "..." : <><span>{LABELS.confirmPayment}</span><CheckCircle2 size={15} /></>}</button>
               </footer>

@@ -15,6 +15,12 @@
 - Added GitHub Actions workflow to notify mobile subscribers after push/deploy on `main`.
 - Fixed Thai notification text mojibake in the mobile notification bar and service worker fallback.
 
+## 2026-07-16 Cash Payment Keypad Tap Fix
+
+- Lifted the cash payment action footer above the mobile bottom navigation safe area.
+- Changed cash keypad, delete, clear, and quick-cash buttons to respond on pointer release with duplicate-tap guarding for more reliable mobile taps.
+- Kept keyboard fallback for accessibility while avoiding duplicate pointer/click input.
+
 ## 2026-07-12
 
 - Created independent `SSTiPOSMobile` scaffold.
