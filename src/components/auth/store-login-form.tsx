@@ -102,7 +102,6 @@ function cacheBranchSelectionPayload(data: { tenant?: unknown; branches?: unknow
 
 export function StoreLoginForm() {
   const inputRef = useRef<HTMLInputElement>(null);
-  const serviceWorkerCleanupRef = useRef<Promise<void> | null>(null);
   const navigationWatchdogRef = useRef<number | null>(null);
   const [storeCode, setStoreCode] = useState("");
   const [error, setError] = useState("");
@@ -124,13 +123,6 @@ export function StoreLoginForm() {
         }
       })
       .catch(() => undefined);
-    if ("serviceWorker" in navigator) {
-      serviceWorkerCleanupRef.current = navigator.serviceWorker.getRegistrations()
-        .then(async (registrations) => {
-          await Promise.all(registrations.map((registration) => registration.unregister().catch(() => false)));
-        })
-        .catch(() => undefined);
-    }
     return () => {
       cancelled = true;
       if (navigationWatchdogRef.current) window.clearTimeout(navigationWatchdogRef.current);
@@ -145,7 +137,6 @@ export function StoreLoginForm() {
     let keepLoadingForNavigation = false;
 
     try {
-      void serviceWorkerCleanupRef.current;
       const res = await fetch("/api/auth/store-code/verify", {
         method: "POST",
         headers: { "Accept": "application/json", "Content-Type": "application/json" },

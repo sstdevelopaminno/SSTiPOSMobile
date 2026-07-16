@@ -1,10 +1,20 @@
 import type { Metadata, Viewport } from "next";
+import { MobileNotificationBar } from "@/components/layout/mobile-notification-bar";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "CpIPOS Mobile",
   description: "Mobile-first POS companion for CpIPOS",
-  manifest: "/manifest.json"
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "CpIPOS",
+  },
+  icons: {
+    icon: "/brand/cpipos-symbol.png",
+    apple: "/brand/cpipos-symbol.png",
+  },
 };
 
 export const viewport: Viewport = {
@@ -19,7 +29,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="th">
-      <body>{children}</body>
+      <body>
+        <MobileNotificationBar />
+        {children}
+      </body>
     </html>
   );
 }

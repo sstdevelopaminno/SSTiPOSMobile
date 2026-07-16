@@ -437,3 +437,11 @@
 - Kept the store login code path available when no active session exists, while preventing normal reloads from unnecessarily dropping operators back to the first login step.
 - Per user instruction, this change was documented before commit/push/deploy; no release action was taken in this step.
 
+## 2026-07-16 Mobile PWA Notifications
+
+- Added a lightweight top mobile notification bar that can show system update notices, online/offline status, and custom in-app alerts.
+- Registered a stable service worker from the root layout and removed the old login-time service worker unregister flow that could cause PWA reloads or sluggish behavior.
+- Replaced the self-unregistering `public/sw.js` with a stable pass-through service worker that claims clients and posts readiness messages without forcing navigation.
+- Updated the web app manifest with app id, scope, display overrides, shortcuts, and Android/iOS-friendly metadata.
+- Per user instruction, this change was documented before commit/push/deploy; no release action was taken in this step.
+
