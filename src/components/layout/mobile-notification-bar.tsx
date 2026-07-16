@@ -3,7 +3,7 @@
 import { Bell, RefreshCcw, WifiOff, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const APP_NOTICE_VERSION = "2026-07-16-web-push";
+const APP_NOTICE_VERSION = "2026-07-16-deploy-push";
 const NOTICE_STORAGE_KEY = "sstipos_mobile_notice_version";
 
 type Notice = {
@@ -101,6 +101,8 @@ export function MobileNotificationBar() {
               tone: "info",
               action: "permission",
             });
+          } else if (Notification.permission === "granted") {
+            void subscribeToPush(publicKey);
           }
         })
         .catch(() => undefined);
@@ -111,7 +113,7 @@ export function MobileNotificationBar() {
       localStorage.setItem(NOTICE_STORAGE_KEY, APP_NOTICE_VERSION);
       const updateNotice: Notice = {
         title: "อัปเดตระบบใหม่",
-        message: "เพิ่ม Web Push และปรับ PWA ให้เสถียรขึ้น",
+        message: "เพิ่มแจ้งเตือนหลัง deploy และปรับ Web Push ให้เสถียรขึ้น",
         tone: "info",
       };
       setNotice(updateNotice);

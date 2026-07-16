@@ -1,4 +1,4 @@
-const SW_VERSION = "sstipos-mobile-2026-07-16-notifications";
+const SW_VERSION = "sstipos-mobile-2026-07-16-deploy-push";
 
 self.addEventListener("install", () => {
   self.skipWaiting();

@@ -15,6 +15,7 @@ export const envSchema = z.object({
   WEB_PUSH_PUBLIC_KEY: z.string().optional(),
   WEB_PUSH_PRIVATE_KEY: z.string().optional(),
   WEB_PUSH_SUBJECT: z.string().default("mailto:admin@sstipos.local"),
+  DEPLOY_NOTIFY_SECRET: z.string().min(24).optional(),
 });
 
 export function getEnv() {

@@ -1,0 +1,22 @@
+name: Notify Mobile After Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for production deployment
+        run: sleep 90
+
+      - name: Send mobile deployment notification
+        run: |
+          curl --fail --silent --show-error \
+            -X POST "https://sstiposmobile.vercel.app/api/system/notifications/deploy" \
+            -H "Content-Type: application/json" \
+            -H "x-deploy-notify-secret: ${{ secrets.DEPLOY_NOTIFY_SECRET }}" \
+            --data "{\"version\":\"${GITHUB_SHA::7}\",\"url\":\"/sales\"}"

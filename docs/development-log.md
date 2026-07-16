@@ -8,6 +8,13 @@
 - Added `docs/mobile-web-push.md` with required VAPID env and Supabase table setup.
 - Tuned the cash payment dialog layering and touch behavior so keypad buttons are not blocked by lower navigation layers.
 
+## 2026-07-16 Deploy Push Notification Automation
+
+- Added a shared server Web Push sender with expired subscription cleanup.
+- Added a protected system deploy notification endpoint for release automation.
+- Added GitHub Actions workflow to notify mobile subscribers after push/deploy on `main`.
+- Fixed Thai notification text mojibake in the mobile notification bar and service worker fallback.
+
 ## 2026-07-12
 
 - Created independent `SSTiPOSMobile` scaffold.

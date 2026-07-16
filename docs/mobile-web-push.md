@@ -1,13 +1,14 @@
 # Mobile Web Push
 
-ระบบ Web Push ใช้สำหรับแจ้งเตือนมือถือแม้ผู้ใช้ปิดหน้าแอปอยู่ โดยต้องมี 3 ส่วนก่อนเปิดใช้งานจริง:
+ระบบ Web Push ใช้สำหรับแจ้งเตือนมือถือแม้ผู้ใช้ปิดหน้าแอปอยู่ โดยมีส่วนประกอบหลักดังนี้:
 
-1. ตั้งค่า VAPID env ใน Vercel
+1. Vercel env
    - `WEB_PUSH_PUBLIC_KEY`
    - `WEB_PUSH_PRIVATE_KEY`
    - `WEB_PUSH_SUBJECT`
+   - `DEPLOY_NOTIFY_SECRET`
 
-2. เพิ่มตาราง Supabase สำหรับเก็บ subscription
+2. Supabase table
 
 ```sql
 create table if not exists public.mobile_push_subscriptions (
@@ -30,6 +31,12 @@ create index if not exists mobile_push_subscriptions_scope_idx
   on public.mobile_push_subscriptions (tenant_id, branch_id, status);
 ```
 
-3. ผู้ใช้ต้องกดเปิดสิทธิ์แจ้งเตือนบนมือถือ และควรเปิดแอปจากไอคอน PWA ที่ติดตั้งบนหน้าจอหลัก
+3. การแจ้งเตือนหลัง deploy
+   - GitHub Actions เรียก `/api/system/notifications/deploy` หลัง push เข้า `main`
+   - endpoint นี้ต้องมี header `x-deploy-notify-secret`
+   - ระบบจะส่ง push ไปยัง subscription ที่ยัง active ทั้งหมด
 
-หมายเหตุ: Chrome บน Android รองรับ Web Push ดีที่สุด ส่วน iOS ต้องติดตั้งเป็น PWA ก่อนจึงจะรับ notification ได้ตามข้อจำกัดของ Safari/iOS.
+หมายเหตุ:
+- Chrome บน Android รองรับ Web Push ดีที่สุด
+- iOS ต้องติดตั้งเป็น PWA ก่อนจึงจะรับ notification ได้
+- ผู้ใช้ต้องกดเปิดสิทธิ์แจ้งเตือนอย่างน้อยหนึ่งครั้งบนเครื่องนั้น
