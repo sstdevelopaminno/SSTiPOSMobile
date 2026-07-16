@@ -3,7 +3,7 @@
 import { Bell, RefreshCcw, WifiOff, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const APP_NOTICE_VERSION = "2026-07-16-pwa-notifications";
+const APP_NOTICE_VERSION = "2026-07-16-web-push";
 const NOTICE_STORAGE_KEY = "sstipos_mobile_notice_version";
 
 type Notice = {
@@ -13,32 +13,64 @@ type Notice = {
   action?: "reload" | "permission";
 };
 
+type PushKeyResponse = {
+  data?: { enabled?: boolean; publicKey?: string | null };
+};
+
 function canUseSystemNotifications() {
-  return typeof window !== "undefined" && "Notification" in window;
+  return typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
+}
+
+function urlBase64ToUint8Array(value: string) {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = `${value}${padding}`.replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const output = new Uint8Array(rawData.length);
+  for (let index = 0; index < rawData.length; index += 1) {
+    output[index] = rawData.charCodeAt(index);
+  }
+  return output;
 }
 
 async function showSystemNotification(title: string, message: string) {
   if (!canUseSystemNotifications() || Notification.permission !== "granted") return;
   try {
-    const registration = await navigator.serviceWorker?.ready;
-    if (registration?.showNotification) {
-      await registration.showNotification(title, {
-        body: message,
-        icon: "/brand/cpipos-symbol.png",
-        badge: "/brand/cpipos-symbol.png",
-        tag: "sstipos-mobile-notice",
-      });
-    } else {
-      new Notification(title, { body: message, icon: "/brand/cpipos-symbol.png", tag: "sstipos-mobile-notice" });
-    }
+    const registration = await navigator.serviceWorker.ready;
+    await registration.showNotification(title, {
+      body: message,
+      icon: "/brand/cpipos-symbol.png",
+      badge: "/brand/cpipos-symbol.png",
+      tag: "sstipos-mobile-notice",
+    });
   } catch {
-    // In-app banner remains the primary notification path.
+    // In-app banner remains available even when the OS notification channel fails.
   }
+}
+
+async function subscribeToPush(publicKey: string) {
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") return false;
+
+  const registration = await navigator.serviceWorker.ready;
+  const existing = await registration.pushManager.getSubscription();
+  const subscription = existing ?? await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(publicKey),
+  });
+
+  const response = await fetch("/api/mobile/notifications/subscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ subscription }),
+  });
+
+  return response.ok;
 }
 
 export function MobileNotificationBar() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [standalone, setStandalone] = useState(false);
+  const [pushPublicKey, setPushPublicKey] = useState<string | null>(null);
 
   useEffect(() => {
     const isStandalone = window.matchMedia("(display-mode: standalone)").matches || (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
@@ -55,12 +87,31 @@ export function MobileNotificationBar() {
       });
     }
 
+    if (canUseSystemNotifications()) {
+      fetch("/api/mobile/notifications/vapid-public-key", { cache: "no-store" })
+        .then((response) => response.json() as Promise<PushKeyResponse>)
+        .then((json) => {
+          const publicKey = json.data?.enabled ? json.data.publicKey : null;
+          if (!publicKey) return;
+          setPushPublicKey(publicKey);
+          if (Notification.permission === "default") {
+            setNotice({
+              title: "เปิดแจ้งเตือนมือถือ",
+              message: "กดเปิดเพื่อรับแจ้งเตือนแม้ปิดแอปอยู่",
+              tone: "info",
+              action: "permission",
+            });
+          }
+        })
+        .catch(() => undefined);
+    }
+
     const previousVersion = localStorage.getItem(NOTICE_STORAGE_KEY);
     if (previousVersion !== APP_NOTICE_VERSION) {
       localStorage.setItem(NOTICE_STORAGE_KEY, APP_NOTICE_VERSION);
       const updateNotice: Notice = {
         title: "อัปเดตระบบใหม่",
-        message: "โหลดเวอร์ชันล่าสุดแล้ว ระบบล็อกอินและ PWA เสถียรขึ้น",
+        message: "เพิ่ม Web Push และปรับ PWA ให้เสถียรขึ้น",
         tone: "info",
       };
       setNotice(updateNotice);
@@ -100,6 +151,14 @@ export function MobileNotificationBar() {
       ? { border: "#bbf7d0", bg: "#f0fdf4", icon: "#16a34a", text: "#14532d" }
       : { border: "#bfdbfe", bg: "#eff6ff", icon: "#1677d9", text: "#0f2745" };
 
+  async function enablePush() {
+    if (!pushPublicKey) return;
+    const subscribed = await subscribeToPush(pushPublicKey).catch(() => false);
+    setNotice(subscribed
+      ? { title: "เปิดแจ้งเตือนแล้ว", message: "ระบบจะส่งแจ้งเตือนผ่านมือถือเมื่อมีประกาศใหม่", tone: "success" }
+      : { title: "เปิดแจ้งเตือนไม่สำเร็จ", message: "ตรวจสอบสิทธิ์แจ้งเตือนของ Chrome หรือการตั้งค่า PWA", tone: "warning" });
+  }
+
   return (
     <div style={{ position: "fixed", top: "max(8px, env(safe-area-inset-top))", left: "50%", zIndex: 120, width: "min(420px, calc(100vw - 20px))", transform: "translateX(-50%)", pointerEvents: "none" }}>
       <div style={{ display: "grid", gridTemplateColumns: "28px 1fr auto", gap: 10, alignItems: "center", border: `1px solid ${colors.border}`, borderRadius: 14, background: colors.bg, padding: "10px 10px 10px 12px", color: colors.text, boxShadow: "0 16px 40px rgba(15,39,69,0.18)", pointerEvents: "auto" }}>
@@ -109,7 +168,7 @@ export function MobileNotificationBar() {
         <div style={{ minWidth: 0 }}>
           <strong style={{ display: "block", overflow: "hidden", fontSize: 13, fontWeight: 950, textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{notice.title}</strong>
           <span style={{ display: "block", marginTop: 2, fontSize: 11, fontWeight: 800, lineHeight: 1.35 }}>{notice.message}</span>
-          {!standalone ? <span style={{ display: "block", marginTop: 3, fontSize: 10, fontWeight: 800, opacity: 0.75 }}>ติดตั้งเป็น PWA เพื่อให้แจ้งเตือนบนมือถือทำงานดีที่สุด</span> : null}
+          {!standalone ? <span style={{ display: "block", marginTop: 3, fontSize: 10, fontWeight: 800, opacity: 0.75 }}>ถ้าเห็นแถบ URL ให้เปิดจากไอคอนที่ติดตั้งบนหน้าจอมือถือ</span> : null}
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           {notice.action === "reload" ? (
@@ -118,7 +177,7 @@ export function MobileNotificationBar() {
             </button>
           ) : null}
           {notice.action === "permission" && canUseSystemNotifications() ? (
-            <button type="button" onClick={() => Notification.requestPermission().catch(() => undefined)} style={{ minHeight: 34, border: `1px solid ${colors.border}`, borderRadius: 999, background: "#fff", color: colors.icon, padding: "0 10px", fontSize: 11, fontWeight: 900 }}>
+            <button type="button" onClick={() => void enablePush()} style={{ minHeight: 34, border: `1px solid ${colors.border}`, borderRadius: 999, background: "#fff", color: colors.icon, padding: "0 10px", fontSize: 11, fontWeight: 900 }}>
               เปิด
             </button>
           ) : null}

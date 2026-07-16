@@ -1,5 +1,13 @@
 ﻿# Development Log
 
+## 2026-07-16 Web Push and Cash Keypad Stability
+
+- Added Web Push backend routes for VAPID public key lookup, subscription save, and branch-scoped notification send.
+- Added service worker push and notification click handling.
+- Updated mobile notification banner to register push subscriptions and show clear PWA/install guidance.
+- Added `docs/mobile-web-push.md` with required VAPID env and Supabase table setup.
+- Tuned the cash payment dialog layering and touch behavior so keypad buttons are not blocked by lower navigation layers.
+
 ## 2026-07-12
 
 - Created independent `SSTiPOSMobile` scaffold.

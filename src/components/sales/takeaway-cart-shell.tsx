@@ -877,7 +877,7 @@ export function TakeawayCartShell({
       ) : null}
 
       {paymentOpen ? (
-        <div role="dialog" aria-modal="true" aria-label={paymentView === "receipt" ? LABELS.receiptTitle : LABELS.choosePayment} style={{ position: "fixed", inset: 0, zIndex: 80, overflowY: paymentView === "transfer" || paymentView === "cash" ? "hidden" : "auto", scrollbarWidth: "none", background: paymentView === "choose" ? "rgba(15,39,69,0.35)" : "#fff", padding: paymentView === "choose" ? 10 : paymentView === "cash" ? "10px 8px max(10px, env(safe-area-inset-bottom))" : "14px 8px max(18px, env(safe-area-inset-bottom))" }}>
+        <div role="dialog" aria-modal="true" aria-label={paymentView === "receipt" ? LABELS.receiptTitle : LABELS.choosePayment} style={{ position: "fixed", inset: 0, zIndex: 180, overflowY: paymentView === "transfer" || paymentView === "cash" ? "hidden" : "auto", scrollbarWidth: "none", background: paymentView === "choose" ? "rgba(15,39,69,0.35)" : "#fff", padding: paymentView === "choose" ? 10 : paymentView === "cash" ? "10px 8px max(10px, env(safe-area-inset-bottom))" : "14px 8px max(18px, env(safe-area-inset-bottom))", pointerEvents: "auto", touchAction: "manipulation" }}>
           {paymentView === "choose" ? (
             <section style={{ width: "min(95vw, 430px)", margin: "42dvh auto 0", transform: "translateY(-50%)", border: "1px solid #d9e8f7", borderRadius: 18, background: "#fff", padding: 14, boxShadow: "0 18px 48px rgba(15,39,69,0.22)" }}>
               <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -908,7 +908,7 @@ export function TakeawayCartShell({
           ) : null}
 
           {paymentView === "cash" ? (
-            <section style={{ position: "relative", height: "calc(100dvh - max(108px, env(safe-area-inset-bottom) + 96px))", display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto auto", gap: 7, maxWidth: 430, margin: "0 auto" }}>
+            <section style={{ position: "relative", height: "calc(100dvh - max(18px, env(safe-area-inset-bottom) + 10px))", display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto auto", gap: 7, maxWidth: 430, margin: "0 auto", pointerEvents: "auto", touchAction: "manipulation" }}>
               <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <div>
                   <h2 style={{ margin: 0, color: "#1d2430", fontSize: 20, fontWeight: 900, lineHeight: 1.12 }}>{LABELS.cashPaymentTitle}</h2>
@@ -934,12 +934,12 @@ export function TakeawayCartShell({
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 64px", gap: 8 }}>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
                       {["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "00", "."].map((key) => (
-                        <button key={key} type="button" onClick={() => appendCashInput(key)} style={{ minHeight: 48, border: "1px solid #d9e8f7", borderRadius: 9, background: "#f8fbff", color: "#111827", fontSize: 21, fontWeight: 900 }}>{key}</button>
+                        <button key={key} type="button" onClick={() => appendCashInput(key)} style={{ minHeight: 48, border: "1px solid #d9e8f7", borderRadius: 9, background: "#f8fbff", color: "#111827", fontSize: 21, fontWeight: 900, pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}>{key}</button>
                       ))}
                     </div>
                     <div style={{ display: "grid", gridTemplateRows: "1fr 1fr", gap: 8 }}>
-                      <button type="button" onClick={deleteCashInput} style={{ minHeight: 48, border: "1px solid #d9e8f7", borderRadius: 9, background: "#eef6ff", color: "#0f2745", fontSize: 11, fontWeight: 900 }}>{LABELS.delete}</button>
-                      <button type="button" onClick={() => setCashReceivedInput("")} style={{ minHeight: 48, border: 0, borderRadius: 9, background: "#164aa6", color: "#fff", fontSize: 11, fontWeight: 900 }}>{LABELS.clear}</button>
+                      <button type="button" onClick={deleteCashInput} style={{ minHeight: 48, border: "1px solid #d9e8f7", borderRadius: 9, background: "#eef6ff", color: "#0f2745", fontSize: 11, fontWeight: 900, pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}>{LABELS.delete}</button>
+                      <button type="button" onClick={() => setCashReceivedInput("")} style={{ minHeight: 48, border: 0, borderRadius: 9, background: "#164aa6", color: "#fff", fontSize: 11, fontWeight: 900, pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}>{LABELS.clear}</button>
                     </div>
                   </div>
                 </div>
@@ -948,7 +948,7 @@ export function TakeawayCartShell({
                   <span style={{ color: "#334155", fontSize: 12, fontWeight: 900 }}>{LABELS.quickCash}</span>
                   <div style={{ display: "grid", width: "min(100%, 372px)", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", justifyContent: "center", gap: 8 }}>
                     {[500, 1000, 1500].map((amount) => (
-                      <button key={amount} type="button" onClick={() => setCashReceivedInput(String(amount))} style={{ minHeight: 38, border: "1px solid #b9d7ff", borderRadius: 8, background: "#eaf4ff", color: "#1d4ed8", fontSize: 10, fontWeight: 900 }}>{BAHT}{amount.toLocaleString("th-TH")}.00</button>
+                      <button key={amount} type="button" onClick={() => setCashReceivedInput(String(amount))} style={{ minHeight: 38, border: "1px solid #b9d7ff", borderRadius: 8, background: "#eaf4ff", color: "#1d4ed8", fontSize: 10, fontWeight: 900, pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}>{BAHT}{amount.toLocaleString("th-TH")}.00</button>
                     ))}
                   </div>
                   <div style={{ display: "grid", width: "min(100%, 414px)", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center", border: "1px solid #d9e8f7", borderRadius: 12, background: "#f8fbff", padding: "8px 12px" }}>
