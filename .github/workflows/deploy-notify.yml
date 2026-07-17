@@ -20,7 +20,7 @@ jobs:
         run: |
           set -euo pipefail
           SHORT_VERSION="${VERSION:0:7}"
-          BODY="$(printf '{"title":"CpIPOS Mobile อัปเดตแล้ว","message":"ระบบอัปเดตเวอร์ชัน %s พร้อมใช้งาน","version":"%s","url":"/sales"}' "$SHORT_VERSION" "$SHORT_VERSION")"
+          BODY="$(SHORT_VERSION="${SHORT_VERSION}" node -e 'const v=process.env.SHORT_VERSION; process.stdout.write(JSON.stringify({title:"CpIPOS Mobile อัปเดตแล้ว",message:`ระบบอัปเดตเวอร์ชัน ${v} พร้อมใช้งาน`,version:v,url:"/sales"}))')"
 
           for attempt in 1 2 3; do
             echo "Sending deploy notification attempt ${attempt}"
@@ -32,23 +32,10 @@ jobs:
             echo "${RESPONSE}"
 
             set +e
-            RESPONSE="${RESPONSE}" python - <<'PY'
-import json
-import os
-import sys
-
-payload = json.loads(os.environ["RESPONSE"])
-data = payload.get("data") or {}
-if data.get("configured") is False:
-    print("Web Push is not configured on production", file=sys.stderr)
-    sys.exit(2)
-if int(data.get("sent") or 0) > 0:
-    sys.exit(0)
-print("No active subscribers received the deploy notification", file=sys.stderr)
-sys.exit(1)
-PY
+            RESPONSE="${RESPONSE}" node -e 'const p=JSON.parse(process.env.RESPONSE); const d=p.data || {}; if (d.configured === false) { console.error("Web Push is not configured on production"); process.exit(2); } if (Number(d.sent || 0) > 0) process.exit(0); console.error("No active subscribers received the deploy notification"); process.exit(1);'
             status=$?
             set -e
+
             if [ "$status" -eq 0 ]; then
               exit 0
             fi
