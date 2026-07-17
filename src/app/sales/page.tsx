@@ -1,5 +1,6 @@
 import { MobileAppShell } from "@/components/layout/mobile-app-shell";
 import { HeldOrdersLauncher } from "@/components/sales/held-orders-launcher";
+import { MemberLauncher } from "@/components/sales/member-launcher";
 import { SalesModeActions } from "@/components/sales/sales-mode-actions";
 import { SalesNotificationBell, type SalesNotification } from "@/components/sales/sales-notification-bell";
 import { requireOpenShift } from "@/lib/permissions/guard";
@@ -114,7 +115,10 @@ export default async function SalesPage() {
           <SalesModeActions />
         </div>
 
-        <HeldOrdersLauncher />
+        <div className="grid grid-cols-[minmax(0,1fr)_112px] gap-3">
+          <HeldOrdersLauncher />
+          <MemberLauncher />
+        </div>
 
         <div className="grid grid-cols-3 gap-3">
           <StatCard icon={ChartNoAxesColumnIncreasing} label="ยอดขายวันนี้" value={`${money(todayTotal)} ฿`} tone="bg-[#f0f6ff] text-[#1677d9]" />

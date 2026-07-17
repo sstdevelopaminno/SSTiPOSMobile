@@ -40,6 +40,8 @@ Takeaway receipts use the store `logo_url` when available. If a store has no log
 
 The sales home bell shows a red unread dot when shift/order/product readiness notices are available. Tapping the bell opens the in-app notification list and marks the current notices as read on that device.
 
+The sales shortcut row includes `รายการพัก` and a square `สมาชิก` action beside it. Sales mode cards use a consistent Lucide icon set for takeaway, table, and delivery entry points.
+
 ## Deployment
 Production alias: `https://sstiposmobile.vercel.app`
 

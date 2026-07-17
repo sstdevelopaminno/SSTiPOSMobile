@@ -1,7 +1,7 @@
 "use client";
 
 import { LoadingDialog } from "@/components/auth/loading-dialog";
-import { Armchair, Bike, ReceiptText, type LucideIcon } from "lucide-react";
+import { Armchair, ShoppingBag, Truck, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -15,9 +15,9 @@ type SalesMode = {
 };
 
 const modes: SalesMode[] = [
-  { href: "/sales/takeaway", icon: ReceiptText, title: "กลับบ้าน", caption: "เปิดออเดอร์", tone: "bg-[#eef6ff] text-[#1677d9]", loadingMessage: "กำลังเปิดออเดอร์กลับบ้าน..." },
+  { href: "/sales/takeaway", icon: ShoppingBag, title: "กลับบ้าน", caption: "เปิดออเดอร์", tone: "bg-[#eef6ff] text-[#1677d9]", loadingMessage: "กำลังเปิดออเดอร์กลับบ้าน..." },
   { href: "/sales/table", icon: Armchair, title: "เลือกโต๊ะ", caption: "เปิดโต๊ะลูกค้า", tone: "bg-[#fff6e8] text-[#d98600]", loadingMessage: "กำลังโหลดผังโต๊ะ..." },
-  { href: "/sales/delivery", icon: Bike, title: "เดลิเวอรี่", caption: "เปิดออเดอร์ส่ง", tone: "bg-[#f2f0ff] text-[#6d5dfc]", loadingMessage: "กำลังโหลดออเดอร์เดลิเวอรี่..." },
+  { href: "/sales/delivery", icon: Truck, title: "เดลิเวอรี่", caption: "เปิดออเดอร์ส่ง", tone: "bg-[#f2f0ff] text-[#6d5dfc]", loadingMessage: "กำลังโหลดออเดอร์เดลิเวอรี่..." },
 ];
 
 export function SalesModeActions() {
