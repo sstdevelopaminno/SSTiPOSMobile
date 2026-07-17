@@ -14,7 +14,7 @@ export function MobileAppShell({ children, title, subtitle, brand, action, scope
         overflowX: "hidden",
         overflowY: "auto",
         overscrollBehavior: "contain",
-        padding: "max(18px, env(safe-area-inset-top)) 16px max(138px, calc(env(safe-area-inset-bottom) + 126px))",
+        padding: "max(18px, env(safe-area-inset-top)) 16px max(122px, calc(env(safe-area-inset-bottom) + 112px))",
         background: "#f7fbff",
         color: "#0f2745",
         fontFamily: "Arial, Tahoma, sans-serif",
