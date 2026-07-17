@@ -204,7 +204,7 @@ export default async function TakeawaySalesPage() {
   ];
   const receiptStoreProfile: ReceiptStoreProfile = {
     displayName: String(tenantProfile?.display_name || tenantProfile?.name || LABEL_FALLBACK_STORE),
-    logoUrl: String(tenantProfile?.logo_url || "/brand/cpipos-symbol.png"),
+    logoUrl: String(tenantProfile?.logo_url || "/brand/cpipos-logo.png"),
     companyAddress: String(tenantProfile?.company_address || ""),
     contactPhone: String(tenantProfile?.contact_phone || tenantProfile?.owner_phone || ""),
     branchName: String(branchProfile?.name || scope.branchId),

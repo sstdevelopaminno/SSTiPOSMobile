@@ -95,6 +95,7 @@ type TransferQrPayload = {
 
 const PAGE_SIZE = 5;
 const BAHT = "\u0e3f";
+const SYSTEM_RECEIPT_LOGO_PATH = "/brand/cpipos-logo.png";
 const LABELS = {
   all: "\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14",
   takeaway: "\u0e01\u0e25\u0e31\u0e1a\u0e1a\u0e49\u0e32\u0e19",
@@ -172,6 +173,28 @@ const LABELS = {
 
 function money(value: number) {
   return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function ReceiptLogoImage({ src, alt }: { src: string; alt: string }) {
+  const [currentSrc, setCurrentSrc] = useState(src || SYSTEM_RECEIPT_LOGO_PATH);
+
+  useEffect(() => {
+    setCurrentSrc(src || SYSTEM_RECEIPT_LOGO_PATH);
+  }, [src]);
+
+  return (
+    <Image
+      src={currentSrc}
+      alt={alt}
+      width={144}
+      height={58}
+      unoptimized
+      onError={() => {
+        if (currentSrc !== SYSTEM_RECEIPT_LOGO_PATH) setCurrentSrc(SYSTEM_RECEIPT_LOGO_PATH);
+      }}
+      style={{ display: "block", width: "min(132px, 54%)", height: 48, objectFit: "contain", justifySelf: "center" }}
+    />
+  );
 }
 
 function normalizeSixDigitPin(value: string) {
@@ -1000,7 +1023,7 @@ export function TakeawayCartShell({
                 </div>
               </div>
 
-              <footer style={{ position: "fixed", right: 0, bottom: "max(72px, env(safe-area-inset-bottom) + 68px)", left: 0, zIndex: 210, display: "grid", gridTemplateColumns: "88px minmax(0, 232px)", justifyContent: "center", gap: 10, alignItems: "center", padding: "0 14px", pointerEvents: "auto" }}>
+              <footer style={{ position: "fixed", right: 0, bottom: "max(104px, env(safe-area-inset-bottom) + 100px)", left: 0, zIndex: 210, display: "grid", gridTemplateColumns: "88px minmax(0, 232px)", justifyContent: "center", gap: 10, alignItems: "center", padding: "0 14px", pointerEvents: "auto" }}>
                 <button type="button" onClick={() => setPaymentView("choose")} style={{ minHeight: 44, border: "1px solid #fecaca", borderRadius: 9, background: "#fff1f1", color: "#b91c1c", fontSize: 11, fontWeight: 900 }}>{LABELS.cancelBill}</button>
                 <button type="button" onClick={() => checkout("cash")} disabled={Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", gap: 9, border: 0, borderRadius: 9, background: Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount ? "#7aa3e8" : "#164aa6", color: "#fff", fontSize: 13, fontWeight: 950 }}>{paymentSubmitting === "cash" ? "..." : <><span>{LABELS.confirmPayment}</span><CheckCircle2 size={15} /></>}</button>
               </footer>
@@ -1080,9 +1103,9 @@ export function TakeawayCartShell({
                 </div>
               </header>
               <div style={{ minHeight: 0, maxHeight: "calc(100dvh - 134px)", overflowY: "auto", scrollbarWidth: "none", border: "1px solid #d9e8f7", borderRadius: 10, background: "#fff", padding: 8 }}>
-                <div style={{ textAlign: "center", borderBottom: "1px dashed #c9dbf2", paddingBottom: 6 }}>
-                  <Image src={receiptStoreProfile.logoUrl || "/brand/cpipos-symbol.png"} alt={receiptStoreProfile.displayName || "CpIPOS"} width={28} height={28} unoptimized style={{ width: 20, height: 20, objectFit: "contain" }} />
-                  <h3 style={{ margin: "3px 0 0", color: "#111827", fontSize: 15, fontWeight: 950 }}>{receiptStoreProfile.displayName || LABELS.storeName}</h3>
+                <div style={{ display: "grid", justifyItems: "center", textAlign: "center", borderBottom: "1px dashed #c9dbf2", paddingBottom: 7 }}>
+                  <ReceiptLogoImage src={receiptStoreProfile.logoUrl} alt={receiptStoreProfile.displayName || "CpIPOS"} />
+                  <h3 style={{ margin: "4px 0 0", color: "#111827", fontSize: 15, fontWeight: 950 }}>{receiptStoreProfile.displayName || LABELS.storeName}</h3>
                   {receiptStoreProfile.companyAddress ? <p style={{ margin: "1px 0 0", color: "#334155", fontSize: 10, fontWeight: 700 }}>{receiptStoreProfile.companyAddress}</p> : null}
                   {receiptStoreProfile.contactPhone ? <p style={{ margin: "1px 0 0", color: "#334155", fontSize: 10, fontWeight: 700 }}>{receiptStoreProfile.contactPhone}</p> : null}
                   <p style={{ margin: "1px 0 0", color: "#334155", fontSize: 11, fontWeight: 800 }}>{receiptStoreProfile.branchName || LABELS.branchName}</p>

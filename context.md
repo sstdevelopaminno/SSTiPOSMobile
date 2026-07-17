@@ -10,4 +10,5 @@ Authoritative rules:
 - UI targets mobile widths 360px, 390px, 430px first.
 
 Implementation notes:
-- Mobile POS bottom navigation keeps the existing five route/permission-driven items and emphasizes the center `สินค้า` action with a raised rounded button, curved page-background notch, safe-area support, and extra shell bottom padding.
+- Mobile POS bottom navigation keeps the existing five route/permission-driven items and uses an integrated U-shaped concave center notch for `สินค้า`; the center item stays inside the bar, with no floating or detached center button.
+- Mobile takeaway receipts use the store `logo_url` when available and fall back to the full system logo `/brand/cpipos-logo.png`, matching the main SSTiPOS receipt fallback.

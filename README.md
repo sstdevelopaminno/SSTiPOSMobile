@@ -34,7 +34,9 @@ Stop the dev server before running `npm run build`; dev and build both write `.n
 The server resolves tenant, branch, user, role, cashier device, POS session, shift and feature state from the shared SSTiPOS Supabase database. Client-submitted scope is never trusted. After cashier device selection, the operator opens the device shift from `ปิดยอด`; once the shift is open, the app enters the `ขาย` menu. `/dashboard` is kept only as a compatibility redirect to `/sales` or `/shifts`.
 
 ## Mobile UI Notes
-The POS bottom navigation keeps the existing five route/permission-controlled menu items (`ขาย`, `รายการขาย`, `สินค้า`, `ปิดยอด`, `ตั้งค่า`). The center `สินค้า` action is intentionally raised as the primary focal point and the mobile shell includes extra bottom padding so fixed navigation does not cover page content.
+The POS bottom navigation keeps the existing five route/permission-controlled menu items (`ขาย`, `รายการขาย`, `สินค้า`, `ปิดยอด`, `ตั้งค่า`). The center `สินค้า` action sits inside an integrated U-shaped concave notch in the bar; it is not a floating or detached center button.
+
+Takeaway receipts use the store `logo_url` when available. If a store has no logo or the image fails to load, receipts fall back to the full system logo at `/brand/cpipos-logo.png`.
 
 ## Deployment
 Production alias: `https://sstiposmobile.vercel.app`

@@ -19,17 +19,17 @@ export function BottomNav({ role }: { role: BranchRole }) {
         bottom: 0,
         left: 0,
         zIndex: 20,
-        padding: "0 8px max(8px, env(safe-area-inset-bottom))",
+        padding: "0 18px max(8px, env(safe-area-inset-bottom))",
       }}
     >
       <nav
         aria-label="เมนูหลัก"
-        className="pointer-events-auto relative mx-auto h-[84px] w-full max-w-[430px] overflow-visible"
+        className="pointer-events-auto relative mx-auto h-[84px] w-full max-w-[390px] overflow-visible"
         style={{
           position: "relative",
           height: 84,
           width: "100%",
-          maxWidth: 430,
+          maxWidth: 390,
           margin: "0 auto",
           overflow: "visible",
         }}
@@ -50,7 +50,7 @@ export function BottomNav({ role }: { role: BranchRole }) {
           }}
         >
           <path
-            d="M22 8 H166 C184 8 184 36 215 36 C246 36 246 8 264 8 H408 C420 8 430 18 430 30 V62 C430 74 420 84 408 84 H22 C10 84 0 74 0 62 V30 C0 18 10 8 22 8 Z"
+            d="M22 8 H160 C178 8 178 36 215 36 C252 36 252 8 270 8 H408 C420 8 430 18 430 30 V62 C430 74 420 84 408 84 H22 C10 84 0 74 0 62 V30 C0 18 10 8 22 8 Z"
             fill="#fff"
             stroke="#cfe4fb"
             strokeWidth="1"
@@ -79,54 +79,36 @@ export function BottomNav({ role }: { role: BranchRole }) {
                   prefetch
                   aria-label={label}
                   aria-current={active ? "page" : undefined}
-                  className="relative z-10 flex min-w-0 touch-manipulation items-start justify-center text-center no-underline outline-none transition-transform duration-200 active:scale-95"
+                  className="relative z-10 flex min-w-0 touch-manipulation flex-col items-center justify-start text-center no-underline outline-none transition-transform duration-200 active:scale-95"
                   style={{
                     position: "relative",
                     zIndex: 10,
                     display: "flex",
                     minWidth: 0,
-                    alignItems: "flex-start",
-                    justifyContent: "center",
+                    minHeight: 70,
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "flex-start",
+                    gap: 1,
+                    paddingTop: 13,
+                    color: active ? "#1677d9" : "#214461",
                     textAlign: "center",
                     textDecoration: "none",
                     outline: "none",
                     transition: "transform 180ms ease, color 180ms ease",
                   }}
                 >
+                  <Icon aria-hidden="true" size={30} strokeWidth={active ? 2.45 : 2.25} />
                   <span
-                    className="flex flex-col items-center justify-center rounded-full border bg-white"
                     style={{
-                      display: "flex",
-                      width: 74,
-                      height: 74,
-                      marginTop: -28,
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 2,
-                      border: active ? "1px solid #b7d8fb" : "1px solid #cfe4fb",
-                      borderRadius: 999,
-                      background: "#fff",
-                      color: active ? "#1677d9" : "#1677d9",
-                      boxShadow: active
-                        ? "0 12px 28px rgba(22, 119, 217, 0.26)"
-                        : "0 9px 22px rgba(22, 119, 217, 0.17)",
-                      transform: active ? "scale(1.04)" : "scale(1)",
-                      transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
+                      color: active ? "#1677d9" : "#214461",
+                      fontSize: 10,
+                      fontWeight: 900,
+                      lineHeight: 1.05,
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    <Icon aria-hidden="true" size={31} strokeWidth={2.25} />
-                    <span
-                      style={{
-                        color: active ? "#1677d9" : "#214461",
-                        fontSize: 10,
-                        fontWeight: 900,
-                        lineHeight: 1.05,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {label}
-                    </span>
+                    {label}
                   </span>
                 </Link>
               );
