@@ -1,11 +1,12 @@
 import { fail, ok } from "@/lib/api/response";
 import { readMobileSession } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/server";
+import { voidPinSchema } from "@/lib/validation/auth";
 import { z } from "zod";
 
 const cancelSchema = z.object({
   orderId: z.string().uuid(),
-  pin: z.string().trim().min(1).max(64),
+  pin: voidPinSchema,
 });
 
 type RoleRow = {

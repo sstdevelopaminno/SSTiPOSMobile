@@ -21,8 +21,8 @@ export function BottomNav({ role }: { role: BranchRole }) {
         zIndex: 20,
         borderTop: "1px solid #d8e6f7",
         background: "rgba(255, 255, 255, 0.96)",
-        padding: "0 8px env(safe-area-inset-bottom)",
-        boxShadow: "0 -8px 24px rgba(15, 39, 69, 0.08)",
+        padding: "6px 10px env(safe-area-inset-bottom)",
+        boxShadow: "0 -10px 28px rgba(15, 39, 69, 0.1)",
       }}
     >
       <div className="mx-auto grid max-w-[430px]" style={{ display: "grid", maxWidth: 430, margin: "0 auto", gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
@@ -33,10 +33,10 @@ export function BottomNav({ role }: { role: BranchRole }) {
               key={href}
               href={href}
               prefetch
-              className={`flex min-h-[64px] touch-manipulation flex-col items-center justify-center gap-1 px-1 text-center text-[11px] font-semibold leading-tight transition active:bg-[#f5faff] active:text-[#1677d9] ${active ? "text-[#1677d9]" : "text-[#53657c]"}`}
+              className={`flex min-h-[72px] touch-manipulation flex-col items-center justify-center gap-1 px-1 text-center text-[12px] font-bold leading-tight transition active:bg-[#f5faff] active:text-[#1677d9] ${active ? "text-[#1677d9]" : "text-[#53657c]"}`}
               style={{
                 display: "flex",
-                minHeight: 64,
+                minHeight: 72,
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
@@ -44,25 +44,25 @@ export function BottomNav({ role }: { role: BranchRole }) {
                 padding: "0 4px",
                 color: active ? "#1677d9" : "#53657c",
                 textAlign: "center",
-                fontSize: 11,
-                fontWeight: 700,
+                fontSize: 12,
+                fontWeight: 800,
                 lineHeight: 1.2,
                 textDecoration: "none",
               }}
             >
               <span
-                className={`flex h-7 w-7 items-center justify-center rounded-lg ${active ? "bg-[#eef6ff]" : ""}`}
+                className={`flex h-9 w-9 items-center justify-center rounded-xl ${active ? "bg-[#eef6ff]" : ""}`}
                 style={{
                   display: "flex",
-                  height: 28,
-                  width: 28,
+                  height: 36,
+                  width: 36,
                   alignItems: "center",
                   justifyContent: "center",
-                  borderRadius: 8,
+                  borderRadius: 12,
                   background: active ? "#eef6ff" : "transparent",
                 }}
               >
-                <Icon size={21} strokeWidth={2.2} />
+                <Icon size={24} strokeWidth={2.2} />
               </span>
               <span>{label}</span>
             </Link>

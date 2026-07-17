@@ -1,6 +1,6 @@
-import { BadgeDollarSign, ClipboardList, PackageSearch, ReceiptText, Settings, ShoppingCart, type LucideIcon } from "lucide-react";
-import type { BranchRole, MobilePermissionKey, PosFeatureCode } from "@/types/contracts";
 import { roleCan } from "@/lib/permissions/mobile-features";
+import type { BranchRole, MobilePermissionKey, PosFeatureCode } from "@/types/contracts";
+import { BadgeDollarSign, ClipboardList, PackageSearch, ReceiptText, Settings, ShoppingCart, type LucideIcon } from "lucide-react";
 
 export type MobileMenuItem = {
   href: string;

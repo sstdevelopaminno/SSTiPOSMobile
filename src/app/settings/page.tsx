@@ -25,20 +25,20 @@ export default async function SettingsPage() {
     <MobileAppShell title="ตั้งค่า" scope={scope}>
       <section className="grid gap-3">
         {rows.map(({ icon: Icon, label, value }) => (
-          <article key={label} className="card p-4">
+          <article key={label} className="card rounded-[18px] p-4">
             <div className="flex items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eef6ff] text-[#1677d9]">
-                <Icon className="h-5 w-5" />
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[#eef6ff] text-[#1677d9]">
+                <Icon className="h-6 w-6" />
               </span>
               <div className="min-w-0">
-                <p className="m-0 text-xs font-semibold text-[#587398]">{label}</p>
-                <p className="m-0 mt-1 break-words text-sm font-bold text-[#0f2745]">{value}</p>
+                <p className="m-0 text-[13px] font-black text-[#587398]">{label}</p>
+                <p className="m-0 mt-1 break-words text-[15px] font-black leading-snug text-[#0f2745]">{value}</p>
               </div>
             </div>
           </article>
         ))}
-        <div className="card p-4 text-sm text-[#587398]">
-          โครงตั้งค่าฝั่งมือถือผูกกับ branch/device/users/payment accounts แล้ว พร้อมต่อ UI ย่อยจากระบบ SSTiPOS
+        <div className="card rounded-[18px] p-5 text-[15px] font-bold leading-relaxed text-[#587398]">
+          โครงตั้งค่าฝั่งมือถือผูกกับ branch, device, users และ payment accounts แล้ว พร้อมต่อ UI ย่อยจากระบบ SSTiPOS
         </div>
       </section>
     </MobileAppShell>

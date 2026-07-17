@@ -71,16 +71,16 @@ export function ShiftActions({ hasOpenShift, expectedCash = 0 }: { hasOpenShift:
 
   return (
     <>
-      <div className="space-y-3">
+      <div className="space-y-4">
         {hasOpenShift ? (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <label className="block space-y-2">
-              <span className="flex items-center gap-2 text-sm font-semibold text-[#0f2745]">
-                <Banknote className="h-4 w-4 text-[#1677d9]" />
+              <span className="flex items-center gap-2 text-[15px] font-black text-[#0f2745]">
+                <Banknote className="h-5 w-5 text-[#1677d9]" />
                 เงินสดปิดกะ
               </span>
               <input
-                className="h-12 w-full rounded-xl border border-[#c9dbf2] bg-white px-4 text-base font-semibold text-[#0f2745] outline-none focus:border-[#1677ff] focus:ring-2 focus:ring-[#d8eaff]"
+                className="h-14 w-full rounded-[16px] border border-[#c9dbf2] bg-white px-4 text-[20px] font-black text-[#0f2745] outline-none focus:border-[#1677ff] focus:ring-2 focus:ring-[#d8eaff]"
                 value={closingCash}
                 onChange={(event) => setClosingCash(normalizeCashInput(event.target.value))}
                 placeholder="0.00"
@@ -88,29 +88,29 @@ export function ShiftActions({ hasOpenShift, expectedCash = 0 }: { hasOpenShift:
                 disabled={loading}
               />
             </label>
-            <div className="rounded-xl bg-[#f7fbff] p-3 text-sm">
+            <div className="rounded-[18px] bg-[#eef6ff] p-4 text-[15px]">
               <div className="flex items-center justify-between gap-3">
-                <span className="font-semibold text-[#587398]">เงินสดคาดหวัง</span>
+                <span className="font-black text-[#587398]">เงินสดคาดหวัง</span>
                 <b className="text-[#0f2745]">{money(expectedCash)} ฿</b>
               </div>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <span className="font-semibold text-[#587398]">ส่วนต่าง</span>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="font-black text-[#587398]">ส่วนต่าง</span>
                 <b className={closeDiff === 0 ? "text-[#0f8d46]" : "text-[#d97706]"}>{money(closeDiff)} ฿</b>
               </div>
             </div>
-            <button type="button" className="w-full rounded-xl border border-[#bcd5f5] bg-white px-4 py-3 text-sm font-semibold text-[#17416f] disabled:opacity-60" disabled={!canClose} onClick={() => submit("close")}>
+            <button type="button" className="min-h-[56px] w-full rounded-[18px] border border-[#bcd5f5] bg-white px-4 text-[16px] font-black text-[#17416f] disabled:opacity-60" disabled={!canClose} onClick={() => submit("close")}>
               {loadingAction === "close" ? "กำลังปิดยอด..." : "ปิดยอด"}
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <label className="block space-y-2">
-              <span className="flex items-center gap-2 text-sm font-semibold text-[#0f2745]">
-                <Banknote className="h-4 w-4 text-[#1677d9]" />
+              <span className="flex items-center gap-2 text-[15px] font-black text-[#0f2745]">
+                <Banknote className="h-5 w-5 text-[#1677d9]" />
                 เงินทอนเริ่มต้น
               </span>
               <input
-                className="h-12 w-full rounded-xl border border-[#c9dbf2] bg-white px-4 text-base font-semibold text-[#0f2745] outline-none focus:border-[#1677ff] focus:ring-2 focus:ring-[#d8eaff]"
+                className="h-14 w-full rounded-[16px] border border-[#c9dbf2] bg-white px-4 text-[20px] font-black text-[#0f2745] outline-none focus:border-[#1677ff] focus:ring-2 focus:ring-[#d8eaff]"
                 value={openingCash}
                 onChange={(event) => setOpeningCash(normalizeCashInput(event.target.value))}
                 placeholder="0.00"
@@ -120,17 +120,17 @@ export function ShiftActions({ hasOpenShift, expectedCash = 0 }: { hasOpenShift:
             </label>
             <div className="grid grid-cols-4 gap-2">
               {[0, 500, 1000, 2000].map((amount) => (
-                <button key={amount} type="button" className="rounded-lg border border-[#c9dbf2] bg-white px-2 py-2 text-xs font-semibold text-[#17416f]" disabled={loading} onClick={() => setOpeningCash(String(amount))}>
+                <button key={amount} type="button" className="min-h-[48px] rounded-[14px] border border-[#c9dbf2] bg-white px-2 text-[13px] font-black text-[#17416f]" disabled={loading} onClick={() => setOpeningCash(String(amount))}>
                   {amount.toLocaleString()}
                 </button>
               ))}
             </div>
-            <button type="button" className="w-full rounded-xl bg-[#1677d9] px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={!canOpen} onClick={() => submit("open")}>
+            <button type="button" className="min-h-[58px] w-full rounded-[18px] bg-[#1677d9] px-4 text-[17px] font-black text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={!canOpen} onClick={() => submit("open")}>
               {loadingAction === "open" ? "กำลังเปิดกะ..." : "เปิดกะและไปขาย"}
             </button>
           </div>
         )}
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        {error ? <p className="text-[14px] font-bold text-red-600">{error}</p> : null}
       </div>
       <LoadingDialog open={loadingAction === "open"} title="กำลังเปิดกะ" message="กำลังบันทึกเงินทอนและเตรียมเมนูขาย..." />
       <LoadingDialog open={loadingAction === "close"} title="กำลังปิดยอด" message="กำลังปิดกะของเครื่องแคชเชียร์นี้..." />

@@ -12,11 +12,7 @@ type HeldOrder = {
   discount: number;
   itemCount: number;
   updatedAt: string | null;
-  items: Array<{
-    name: string;
-    quantity: number;
-    lineTotal: number;
-  }>;
+  items: Array<{ name: string; quantity: number; lineTotal: number }>;
 };
 
 function money(value: number) {
@@ -29,9 +25,9 @@ function normalizeSixDigitPin(value: string) {
 
 function PinDigits({ value }: { value: string }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6 }}>
+    <div className="grid grid-cols-6 gap-2">
       {Array.from({ length: 6 }).map((_, index) => (
-        <span key={index} style={{ display: "grid", minHeight: 44, placeItems: "center", border: "1px solid #ffd7d7", borderRadius: 10, background: "#fff", color: "#0f2745", fontSize: 18, fontWeight: 950 }}>
+        <span key={index} className="grid min-h-[48px] place-items-center rounded-[14px] border border-[#ffd7d7] bg-white text-[20px] font-black text-[#0f2745]">
           {value[index] ? "*" : ""}
         </span>
       ))}
@@ -117,57 +113,53 @@ export function HeldOrdersLauncher() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={loadHeldOrders}
-        className="flex min-h-[48px] w-full touch-manipulation items-center justify-center gap-2 rounded-xl border border-[#d9e8f7] bg-white px-4 text-sm font-black text-[#17416f] shadow-sm transition active:scale-[0.99] active:bg-[#f5faff]"
-      >
-        <ClipboardList className="h-5 w-5 text-[#1677d9]" />
+      <button type="button" onClick={loadHeldOrders} className="flex min-h-[58px] w-full touch-manipulation items-center justify-center gap-3 rounded-[18px] border border-[#d4e5f8] bg-white px-4 text-[18px] font-black text-[#17416f] shadow-[0_8px_20px_rgba(15,39,69,0.06)] transition active:scale-[0.99] active:bg-[#f5faff]">
+        <ClipboardList className="h-6 w-6 text-[#1677d9]" />
         รายการพัก
       </button>
 
       {open ? (
-        <div role="dialog" aria-modal="true" aria-label="รายการพัก" style={{ position: "fixed", inset: 0, zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,39,69,0.35)", padding: 16 }}>
-          <section style={{ width: "min(94vw, 430px)", maxHeight: "min(76vh, 620px)", overflowY: "auto", border: "1px solid #d9e8f7", borderRadius: 18, background: "#f8fbff", padding: 14, boxShadow: "0 18px 48px rgba(15,39,69,0.22)" }}>
-            <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
+        <div role="dialog" aria-modal="true" aria-label="รายการพัก" className="fixed inset-0 z-[70] flex items-center justify-center bg-[rgba(15,39,69,0.35)] p-4">
+          <section className="max-h-[76vh] w-[min(94vw,430px)] overflow-y-auto rounded-[22px] border border-[#d9e8f7] bg-[#f8fbff] p-4 shadow-[0_18px_48px_rgba(15,39,69,0.22)]">
+            <header className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h2 style={{ margin: 0, color: "#0f2745", fontSize: 17, fontWeight: 950 }}>รายการพัก</h2>
-                <p style={{ margin: "2px 0 0", color: "#7a8fa8", fontSize: 11, fontWeight: 800 }}>{orders.length} รายการ</p>
+                <h2 className="m-0 text-[22px] font-black leading-tight text-[#0f2745]">รายการพัก</h2>
+                <p className="m-0 mt-1 text-[13px] font-bold text-[#6a7f99]">{orders.length} รายการ</p>
               </div>
-              <button type="button" onClick={() => setOpen(false)} aria-label="ปิด" style={{ display: "flex", width: 38, height: 38, minHeight: 38, alignItems: "center", justifyContent: "center", border: "1px solid #d9e8f7", borderRadius: 999, background: "#fff", color: "#17416f" }}>
-                <X size={18} />
+              <button type="button" onClick={() => setOpen(false)} aria-label="ปิด" className="flex h-11 w-11 min-h-11 items-center justify-center rounded-full border border-[#d9e8f7] bg-white text-[#17416f]">
+                <X size={22} />
               </button>
             </header>
 
-            {error ? <div style={{ border: "1px solid #ffd7d7", borderRadius: 14, background: "#fff8f8", padding: 12, color: "#d62929", fontSize: 12, fontWeight: 800 }}>{error}</div> : null}
-            {loading ? <div style={{ padding: 18, textAlign: "center", color: "#587398", fontSize: 13, fontWeight: 900 }}>กำลังโหลด...</div> : null}
-            {!loading && !orders.length && !error ? <div style={{ border: "1px solid #d9e8f7", borderRadius: 14, background: "#fff", padding: 16, color: "#7a8fa8", fontSize: 13, fontWeight: 800, textAlign: "center" }}>ยังไม่มีบิลที่พัก</div> : null}
+            {error ? <div className="rounded-[16px] border border-[#ffd7d7] bg-[#fff8f8] p-3 text-[14px] font-bold text-[#d62929]">{error}</div> : null}
+            {loading ? <div className="p-5 text-center text-[15px] font-black text-[#587398]">กำลังโหลด...</div> : null}
+            {!loading && !orders.length && !error ? <div className="rounded-[16px] border border-[#d9e8f7] bg-white p-5 text-center text-[15px] font-bold text-[#7a8fa8]">ยังไม่มีบิลที่พัก</div> : null}
 
-            <div style={{ display: "grid", gap: 10 }}>
+            <div className="grid gap-3">
               {orders.map((order) => (
-                <article key={order.id} style={{ border: "1px solid #d9e8f7", borderRadius: 14, background: "#fff", padding: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                <article key={order.id} className="rounded-[18px] border border-[#d9e8f7] bg-white p-4">
+                  <div className="flex justify-between gap-3">
                     <div>
-                      <b style={{ color: "#0f2745", fontSize: 13 }}>{order.orderNo}</b>
-                      <p style={{ margin: "2px 0 0", color: "#7a8fa8", fontSize: 11 }}>{order.updatedAt ? new Date(order.updatedAt).toLocaleString("th-TH") : "-"}</p>
+                      <b className="text-[15px] text-[#0f2745]">{order.orderNo}</b>
+                      <p className="m-0 mt-1 text-[12px] font-semibold text-[#7a8fa8]">{order.updatedAt ? new Date(order.updatedAt).toLocaleString("th-TH") : "-"}</p>
                     </div>
-                    <b style={{ color: "#1677d9", fontSize: 14 }}>฿{money(order.total)}</b>
+                    <b className="text-[16px] text-[#1677d9]">฿{money(order.total)}</b>
                   </div>
-                  <p style={{ margin: "8px 0 0", color: "#587398", fontSize: 12, fontWeight: 800 }}>{order.itemCount} รายการ</p>
-                  <div style={{ marginTop: 6, display: "grid", gap: 4 }}>
+                  <p className="m-0 mt-3 text-[13px] font-black text-[#587398]">{order.itemCount} รายการ</p>
+                  <div className="mt-2 grid gap-1.5">
                     {order.items.slice(0, 3).map((item, index) => (
-                      <div key={`${order.id}-${index}`} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8, color: "#334155", fontSize: 11 }}>
+                      <div key={`${order.id}-${index}`} className="grid grid-cols-[1fr_auto] gap-2 text-[12px] text-[#334155]">
                         <span>{item.name} x {item.quantity}</span>
                         <b>฿{money(item.lineTotal)}</b>
                       </div>
                     ))}
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 46px", gap: 8, marginTop: 10 }}>
-                    <button type="button" onClick={() => restoreHeldOrder(order.id)} disabled={Boolean(restoringId) || cancelLoading} style={{ width: "100%", minHeight: 40, border: 0, borderRadius: 12, background: "#1677d9", color: "#fff", fontSize: 12, fontWeight: 950 }}>
+                  <div className="mt-3 grid grid-cols-[1fr_52px] gap-2">
+                    <button type="button" onClick={() => restoreHeldOrder(order.id)} disabled={Boolean(restoringId) || cancelLoading} className="min-h-[48px] rounded-[14px] border-0 bg-[#1677d9] text-[14px] font-black text-white">
                       {restoringId === order.id ? "กำลังเรียก..." : "เรียกกลับ"}
                     </button>
-                    <button type="button" onClick={() => { setCancelTarget(order); setCancelPin(""); setCancelError(""); }} disabled={Boolean(restoringId) || cancelLoading} aria-label="ยกเลิกบิล" style={{ display: "flex", minHeight: 40, alignItems: "center", justifyContent: "center", border: "1px solid #fecaca", borderRadius: 12, background: "#fff1f1", color: "#d62929" }}>
-                      <Trash2 size={17} />
+                    <button type="button" onClick={() => { setCancelTarget(order); setCancelPin(""); setCancelError(""); }} disabled={Boolean(restoringId) || cancelLoading} aria-label="ยกเลิกบิล" className="flex min-h-[48px] items-center justify-center rounded-[14px] border border-[#fecaca] bg-[#fff1f1] text-[#d62929]">
+                      <Trash2 size={20} />
                     </button>
                   </div>
                 </article>
@@ -178,24 +170,24 @@ export function HeldOrdersLauncher() {
       ) : null}
 
       {cancelTarget ? (
-        <div role="dialog" aria-modal="true" aria-label="ยกเลิกบิลพัก" style={{ position: "fixed", inset: 0, zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,39,69,0.35)", padding: 16 }}>
-          <section style={{ width: "min(92vw, 380px)", border: "1px solid #ffd7d7", borderRadius: 18, background: "#fff", padding: 14, boxShadow: "0 18px 48px rgba(15,39,69,0.22)" }}>
-            <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-              <h2 style={{ margin: 0, color: "#d62929", fontSize: 16, fontWeight: 900 }}>ยกเลิกบิลพัก</h2>
-              <button type="button" onClick={() => setCancelTarget(null)} aria-label="ปิด" style={{ display: "flex", width: 34, height: 34, minHeight: 34, alignItems: "center", justifyContent: "center", border: "1px solid #ffd7d7", borderRadius: 999, background: "#fff", color: "#d62929" }}>
-                <X size={17} />
+        <div role="dialog" aria-modal="true" aria-label="ยกเลิกบิลพัก" className="fixed inset-0 z-[90] flex items-center justify-center bg-[rgba(15,39,69,0.35)] p-4">
+          <section className="w-[min(92vw,380px)] rounded-[22px] border border-[#ffd7d7] bg-white p-4 shadow-[0_18px_48px_rgba(15,39,69,0.22)]">
+            <header className="flex items-center justify-between gap-2">
+              <h2 className="m-0 text-[20px] font-black text-[#d62929]">ยกเลิกบิลพัก</h2>
+              <button type="button" onClick={() => setCancelTarget(null)} aria-label="ปิด" className="flex h-10 w-10 min-h-10 items-center justify-center rounded-full border border-[#ffd7d7] bg-white text-[#d62929]">
+                <X size={20} />
               </button>
             </header>
-            <p style={{ margin: "8px 0 0", color: "#7a8fa8", fontSize: 12, fontWeight: 700 }}>{cancelTarget.orderNo}</p>
-            <label style={{ display: "grid", gap: 6, marginTop: 12, color: "#7a8fa8", fontSize: 11, fontWeight: 800 }}>
+            <p className="m-0 mt-2 text-[13px] font-bold text-[#7a8fa8]">{cancelTarget.orderNo}</p>
+            <label className="mt-4 grid gap-2 text-[13px] font-black text-[#7a8fa8]">
               ใส่ PIN ผู้มีสิทธิ์
-              <input id="held-cancel-pin" value={cancelPin} onChange={(event) => setCancelPin(normalizeSixDigitPin(event.target.value))} type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoComplete="one-time-code" style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }} />
-              <button type="button" onClick={() => document.getElementById("held-cancel-pin")?.focus()} style={{ border: 0, background: "transparent", padding: 0, textAlign: "initial" }}>
+              <input id="held-cancel-pin" value={cancelPin} onChange={(event) => setCancelPin(normalizeSixDigitPin(event.target.value))} type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoComplete="one-time-code" className="pointer-events-none absolute h-px w-px opacity-0" />
+              <button type="button" onClick={() => document.getElementById("held-cancel-pin")?.focus()} className="border-0 bg-transparent p-0 text-left">
                 <PinDigits value={cancelPin} />
               </button>
             </label>
-            {cancelError ? <p style={{ margin: "8px 0 0", color: "#d62929", fontSize: 12, fontWeight: 800 }}>{cancelError}</p> : null}
-            <button type="button" onClick={cancelHeldOrder} disabled={cancelPin.length !== 6 || cancelLoading} style={{ width: "100%", minHeight: 46, marginTop: 12, border: 0, borderRadius: 13, background: cancelPin.length !== 6 || cancelLoading ? "#f2a6a6" : "#d62929", color: "#fff", fontSize: 14, fontWeight: 900 }}>
+            {cancelError ? <p className="m-0 mt-3 text-[13px] font-bold text-[#d62929]">{cancelError}</p> : null}
+            <button type="button" onClick={cancelHeldOrder} disabled={cancelPin.length !== 6 || cancelLoading} className="mt-4 min-h-[52px] w-full rounded-[16px] border-0 bg-[#d62929] text-[16px] font-black text-white disabled:bg-[#f2a6a6]">
               {cancelLoading ? "กำลังยกเลิก..." : "ยืนยันยกเลิกบิล"}
             </button>
           </section>

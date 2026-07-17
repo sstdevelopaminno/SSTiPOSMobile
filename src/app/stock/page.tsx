@@ -25,34 +25,34 @@ export default async function StockPage() {
     <MobileAppShell title="สินค้า" scope={scope}>
       <section className="grid gap-3">
         <div className="grid grid-cols-2 gap-3">
-          <div className="card p-3">
-            <p className="m-0 text-xs font-semibold text-[#587398]">สินค้าพร้อมขาย</p>
-            <b className="mt-2 block text-xl text-[#0f2745]">{activeCount}</b>
+          <div className="card rounded-[18px] p-4">
+            <p className="m-0 text-[13px] font-black text-[#587398]">สินค้าพร้อมขาย</p>
+            <b className="mt-2 block text-[26px] text-[#0f2745]">{activeCount}</b>
           </div>
-          <div className="card p-3">
-            <p className="m-0 text-xs font-semibold text-[#587398]">หมวดสินค้า</p>
-            <b className="mt-2 block text-xl text-[#0f2745]">{categories.size}</b>
+          <div className="card rounded-[18px] p-4">
+            <p className="m-0 text-[13px] font-black text-[#587398]">หมวดสินค้า</p>
+            <b className="mt-2 block text-[26px] text-[#0f2745]">{categories.size}</b>
           </div>
         </div>
 
         {(products ?? []).length ? (products ?? []).map((product) => (
-          <article key={product.id} className="card p-4">
+          <article key={product.id} className="card rounded-[18px] p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="m-0 text-xs font-semibold text-[#7a8fa8]">{product.category ?? "-"}</p>
-                <h2 className="m-0 mt-1 truncate text-base font-bold text-[#0f2745]">{product.name}</h2>
-                <p className="m-0 mt-1 text-xs text-[#7a8fa8]">{product.sku}</p>
+                <p className="m-0 text-[13px] font-bold text-[#7a8fa8]">{product.category ?? "-"}</p>
+                <h2 className="m-0 mt-1 truncate text-[18px] font-black text-[#0f2745]">{product.name}</h2>
+                <p className="m-0 mt-1 text-[13px] font-semibold text-[#7a8fa8]">{product.sku}</p>
               </div>
-              <div className="text-right">
-                <b className="block text-base text-[#1677d9]">{money(product.price)} ฿</b>
-                <span className={`mt-1 inline-flex rounded-full px-2 py-1 text-[10px] font-bold ${product.is_active ? "bg-[#dffbea] text-[#0f8d46]" : "bg-[#f2f4f7] text-[#7a8fa8]"}`}>
+              <div className="shrink-0 text-right">
+                <b className="block text-[18px] text-[#1677d9]">{money(product.price)} ฿</b>
+                <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-[12px] font-black ${product.is_active ? "bg-[#dffbea] text-[#0f8d46]" : "bg-[#f2f4f7] text-[#7a8fa8]"}`}>
                   {product.is_active ? "เปิดขาย" : "ปิดขาย"}
                 </span>
               </div>
             </div>
           </article>
         )) : (
-          <div className="card p-4 text-sm text-[#587398]">ยังไม่มีสินค้าในสาขานี้</div>
+          <div className="card rounded-[18px] p-5 text-[15px] font-bold text-[#587398]">ยังไม่มีสินค้าในสาขานี้</div>
         )}
       </section>
     </MobileAppShell>

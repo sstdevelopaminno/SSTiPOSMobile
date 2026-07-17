@@ -237,11 +237,13 @@ export function TakeawayCartShell({
   const [holdPin, setHoldPin] = useState("");
   const [holdError, setHoldError] = useState("");
   const [holdLoading, setHoldLoading] = useState(false);
+  const [cancelSuccess, setCancelSuccess] = useState<{ orderNo: string; message: string } | null>(null);
   const [addedNotice, setAddedNotice] = useState("");
   const [activeCategory, setActiveCategory] = useState(categories[0]?.name ?? LABELS.all);
   const categoryScrollerRef = useRef<HTMLDivElement>(null);
   const addedNoticeTimerRef = useRef<number | null>(null);
   const cashButtonTapRef = useRef(0);
+  const cancelRedirectTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     setActiveOrderId(orderId);
@@ -253,6 +255,7 @@ export function TakeawayCartShell({
   useEffect(() => {
     return () => {
       if (addedNoticeTimerRef.current) window.clearTimeout(addedNoticeTimerRef.current);
+      if (cancelRedirectTimerRef.current) window.clearTimeout(cancelRedirectTimerRef.current);
     };
   }, []);
 
@@ -438,24 +441,53 @@ export function TakeawayCartShell({
     });
   }
 
-  async function cancelBill() {
+  function openCancelBillDialog() {
+    setHoldPin("");
+    setHoldError("");
+    setCancelSuccess(null);
+    setHoldOpen(true);
+    window.setTimeout(() => document.getElementById("cancel-bill-pin")?.focus(), 80);
+  }
+
+  async function cancelBill(pin = holdPin) {
+    if (holdLoading || pin.length !== 6) return;
     setHoldLoading(true);
     setHoldError("");
     try {
       const response = await fetch("/api/mobile/sales/takeaway/cancel", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ orderId: activeOrderId, pin: holdPin }),
+        body: JSON.stringify({ orderId: activeOrderId, pin }),
       });
       const json = await response.json().catch(() => null);
       if (!response.ok || json?.error) {
-        setHoldError(json?.error?.message ?? "Hold failed");
+        setHoldError(json?.error?.message ?? "ยกเลิกบิลไม่สำเร็จ");
+        setHoldPin("");
         return;
       }
-      router.push(json?.data?.redirectTo ?? "/sales");
-      router.refresh();
+      const redirectTo = json?.data?.redirectTo ?? "/sales";
+      const cancelledOrderNo = json?.data?.orderNo ?? activeOrderNo;
+      clearPaidBillState();
+      setPaymentOpen(false);
+      setHeldListOpen(false);
+      setHoldPin("");
+      setHoldError("");
+      setCancelSuccess({ orderNo: cancelledOrderNo, message: "ยกเลิกบิลสำเร็จ กำลังกลับเมนูขาย..." });
+      if (cancelRedirectTimerRef.current) window.clearTimeout(cancelRedirectTimerRef.current);
+      cancelRedirectTimerRef.current = window.setTimeout(() => {
+        router.replace(redirectTo);
+        router.refresh();
+      }, 900);
     } finally {
       setHoldLoading(false);
+    }
+  }
+
+  function handleCancelPinChange(value: string) {
+    const nextPin = normalizeSixDigitPin(value);
+    setHoldPin(nextPin);
+    if (nextPin.length === 6 && !holdLoading && !cancelSuccess) {
+      window.setTimeout(() => void cancelBill(nextPin), 0);
     }
   }
 
@@ -689,7 +721,7 @@ export function TakeawayCartShell({
         ) : null}
 
         <div style={{ display: "grid", gridTemplateColumns: "0.9fr 0.9fr 1.35fr", gap: 7, marginTop: 12, borderTop: "1px solid #eef4fb", paddingTop: 12 }}>
-          <button type="button" onClick={() => setHoldOpen(true)} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", border: "1px solid #ffd7d7", borderRadius: 13, background: "#fff8f8", color: "#d62929", fontSize: 12, fontWeight: 900 }}>
+          <button type="button" onClick={openCancelBillDialog} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", border: "1px solid #ffd7d7", borderRadius: 13, background: "#fff8f8", color: "#d62929", fontSize: 12, fontWeight: 900 }}>
             {LABELS.cancelBill}
           </button>
           <button type="button" onClick={holdCurrentBill} disabled={holdSubmitting} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", border: "1px solid #ffdca8", borderRadius: 13, background: holdSubmitting ? "#fff4e1" : "#fffaf2", color: holdSubmitting ? "#d6a96f" : "#b65f00", fontSize: 12, fontWeight: 900 }}>
@@ -1099,26 +1131,39 @@ export function TakeawayCartShell({
         </div>
       ) : null}
 
+      {cancelSuccess ? (
+        <div role="alertdialog" aria-modal="true" aria-label="ยกเลิกบิลสำเร็จ" style={{ position: "fixed", inset: 0, zIndex: 95, display: "grid", placeItems: "center", background: "rgba(15,39,69,0.35)", backdropFilter: "blur(4px)", padding: 24 }}>
+          <div style={{ display: "grid", justifyItems: "center", gap: 12, width: "min(360px, 100%)", borderRadius: 18, background: "#fff", padding: "26px 22px", color: "#0f2745", textAlign: "center", boxShadow: "0 18px 48px rgba(15,39,69,0.22)" }}>
+            <span style={{ display: "grid", width: 52, height: 52, placeItems: "center", borderRadius: 999, background: "#e8fff2", color: "#16a34a" }}>
+              <CheckCircle2 size={30} />
+            </span>
+            <h2 style={{ margin: 0, color: "#0f2745", fontSize: 20, fontWeight: 950 }}>ยกเลิกบิลสำเร็จ</h2>
+            <p style={{ margin: 0, color: "#587398", fontSize: 13, fontWeight: 800 }}>{cancelSuccess.orderNo}</p>
+            <p style={{ margin: 0, color: "#587398", fontSize: 13, fontWeight: 800 }}>{cancelSuccess.message}</p>
+          </div>
+        </div>
+      ) : null}
+
       {holdOpen ? (
         <div role="dialog" aria-modal="true" aria-label={LABELS.cancelBill} style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,39,69,0.35)", padding: 16 }}>
           <section style={{ width: "min(92vw, 380px)", border: "1px solid #ffd7d7", borderRadius: 18, background: "#fff", padding: 14, boxShadow: "0 18px 48px rgba(15,39,69,0.22)" }}>
             <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
               <h2 style={{ margin: 0, color: "#d62929", fontSize: 16, fontWeight: 900 }}>{LABELS.cancelBill}</h2>
-              <button type="button" onClick={() => setHoldOpen(false)} aria-label={LABELS.close} style={{ display: "flex", width: 34, height: 34, minHeight: 34, alignItems: "center", justifyContent: "center", border: "1px solid #ffd7d7", borderRadius: 999, background: "#fff", color: "#d62929" }}>
+              <button type="button" onClick={() => { if (!holdLoading) setHoldOpen(false); }} disabled={holdLoading} aria-label={LABELS.close} style={{ display: "flex", width: 34, height: 34, minHeight: 34, alignItems: "center", justifyContent: "center", border: "1px solid #ffd7d7", borderRadius: 999, background: "#fff", color: "#d62929", opacity: holdLoading ? 0.5 : 1 }}>
                 <X size={17} />
               </button>
             </header>
             <p style={{ margin: "8px 0 0", color: "#7a8fa8", fontSize: 12, fontWeight: 700 }}>{activeOrderNo}</p>
             <label style={{ display: "grid", gap: 6, marginTop: 12, color: "#7a8fa8", fontSize: 11, fontWeight: 800 }}>
               {LABELS.enterPin}
-              <input id="cancel-bill-pin" value={holdPin} onChange={(event) => setHoldPin(normalizeSixDigitPin(event.target.value))} type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoComplete="one-time-code" style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }} />
+              <input id="cancel-bill-pin" value={holdPin} onChange={(event) => handleCancelPinChange(event.target.value)} type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoComplete="one-time-code" style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }} />
               <button type="button" onClick={() => document.getElementById("cancel-bill-pin")?.focus()} style={{ border: 0, background: "transparent", padding: 0, textAlign: "initial" }}>
                 <PinDigits value={holdPin} />
               </button>
             </label>
             {holdError ? <p style={{ margin: "8px 0 0", color: "#d62929", fontSize: 12, fontWeight: 800 }}>{holdError}</p> : null}
-            <button type="button" onClick={cancelBill} disabled={holdPin.length !== 6 || holdLoading} style={{ width: "100%", minHeight: 46, marginTop: 12, border: 0, borderRadius: 13, background: holdPin.length !== 6 || holdLoading ? "#f2a6a6" : "#d62929", color: "#fff", fontSize: 14, fontWeight: 900 }}>
-              {holdLoading ? "..." : LABELS.cancelBill}
+            <button type="button" onClick={() => void cancelBill()} disabled={holdPin.length !== 6 || holdLoading} style={{ width: "100%", minHeight: 50, marginTop: 12, border: 0, borderRadius: 13, background: holdPin.length !== 6 || holdLoading ? "#f2a6a6" : "#d62929", color: "#fff", fontSize: 14, fontWeight: 900 }}>
+              {holdLoading ? "กำลังยืนยันและลบบิล..." : holdPin.length === 6 ? "กำลังยืนยันอัตโนมัติ..." : LABELS.cancelBill}
             </button>
           </section>
         </div>

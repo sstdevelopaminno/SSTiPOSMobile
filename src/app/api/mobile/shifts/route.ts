@@ -104,7 +104,7 @@ export async function POST(request: Request) {
       .eq("tenant_id", scope.tenantId)
       .eq("branch_id", scope.branchId)
       .eq("shift_id", openShift.id)
-      .eq("status", "completed");
+      .eq("status", "paid");
     if (paymentsError) throw new Error(paymentsError.message);
 
     const summary = {

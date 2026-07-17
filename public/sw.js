@@ -30,8 +30,8 @@ self.addEventListener("push", (event) => {
   const title = payload.title || "CpIPOS Mobile";
   const options = {
     body: payload.body || payload.message || "มีการแจ้งเตือนใหม่",
-    icon: payload.icon || "/brand/cpipos-symbol.png",
-    badge: payload.badge || "/brand/cpipos-symbol.png",
+    icon: payload.icon || "/brand/cpipos-icon-transparent-192.png",
+    badge: payload.badge || "/brand/cpipos-icon-transparent-192.png",
     tag: payload.tag || "sstipos-mobile-push",
     renotify: Boolean(payload.renotify),
     data: {

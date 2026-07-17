@@ -38,8 +38,8 @@ async function showSystemNotification(title: string, message: string) {
     const registration = await navigator.serviceWorker.ready;
     await registration.showNotification(title, {
       body: message,
-      icon: "/brand/cpipos-symbol.png",
-      badge: "/brand/cpipos-symbol.png",
+      icon: "/brand/cpipos-icon-transparent-192.png",
+      badge: "/brand/cpipos-icon-transparent-192.png",
       tag: "sstipos-mobile-notice",
     });
   } catch {

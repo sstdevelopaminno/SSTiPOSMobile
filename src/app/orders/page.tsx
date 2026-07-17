@@ -38,22 +38,22 @@ export default async function OrdersPage() {
       <section className="grid gap-3">
         {(orders ?? []).length ? (
           (orders ?? []).map((order) => (
-            <article key={order.id} className="card p-4">
+            <article key={order.id} className="card rounded-[18px] p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="m-0 text-xs font-semibold text-[#7a8fa8]">{orderTypeLabel(order.order_type)}</p>
-                  <h2 className="m-0 mt-1 truncate text-base font-bold text-[#0f2745]">{order.order_no}</h2>
-                  <p className="m-0 mt-1 text-xs text-[#7a8fa8]">{order.created_at ? new Date(order.created_at).toLocaleString("th-TH") : "-"}</p>
+                  <p className="m-0 text-[13px] font-bold text-[#7a8fa8]">{orderTypeLabel(order.order_type)}</p>
+                  <h2 className="m-0 mt-1 truncate text-[18px] font-black text-[#0f2745]">{order.order_no}</h2>
+                  <p className="m-0 mt-1 text-[13px] font-semibold text-[#7a8fa8]">{order.created_at ? new Date(order.created_at).toLocaleString("th-TH") : "-"}</p>
                 </div>
-                <div className="text-right">
-                  <b className="block text-base text-[#1677d9]">{money(order.grand_total ?? order.total_amount)} ฿</b>
-                  <span className="mt-1 inline-flex rounded-full bg-[#eef6ff] px-2 py-1 text-[10px] font-bold text-[#17416f]">{statusLabel(order.status)}</span>
+                <div className="shrink-0 text-right">
+                  <b className="block text-[18px] text-[#1677d9]">{money(order.grand_total ?? order.total_amount)} ฿</b>
+                  <span className="mt-2 inline-flex rounded-full bg-[#eef6ff] px-3 py-1 text-[12px] font-black text-[#17416f]">{statusLabel(order.status)}</span>
                 </div>
               </div>
             </article>
           ))
         ) : (
-          <div className="card p-4 text-sm text-[#587398]">ยังไม่มีรายการขายในกะนี้</div>
+          <div className="card rounded-[18px] p-5 text-[15px] font-bold text-[#587398]">ยังไม่มีรายการขายในกะนี้</div>
         )}
       </section>
     </MobileAppShell>
