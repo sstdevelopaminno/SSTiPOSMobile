@@ -38,6 +38,8 @@ The POS bottom navigation keeps the existing five route/permission-controlled me
 
 Takeaway receipts use the store `logo_url` when available. If a store has no logo or the image fails to load, receipts fall back to the full system logo at `/brand/cpipos-logo.png`.
 
+The sales home bell shows a red unread dot when shift/order/product readiness notices are available. Tapping the bell opens the in-app notification list and marks the current notices as read on that device.
+
 ## Deployment
 Production alias: `https://sstiposmobile.vercel.app`
 

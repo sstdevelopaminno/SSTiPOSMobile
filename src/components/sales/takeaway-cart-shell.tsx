@@ -1098,11 +1098,13 @@ export function TakeawayCartShell({
               <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <h2 style={{ margin: 0, color: "#1d2430", fontSize: 19, fontWeight: 900 }}>{LABELS.receiptTitle}</h2>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <button type="button" onClick={printReceiptAndClose} style={{ minWidth: 86, minHeight: 38, border: 0, borderRadius: 9, background: "#ff681f", color: "#fff", fontSize: 12, fontWeight: 950 }}>{LABELS.printReceipt}</button>
                   <button type="button" onClick={closeReceiptWindow} style={{ minWidth: 72, minHeight: 38, border: "1px solid #d9e8f7", borderRadius: 9, background: "#fff", color: "#0f2745", fontSize: 12, fontWeight: 800 }}>{LABELS.closeWindow}</button>
                 </div>
               </header>
               <div style={{ minHeight: 0, maxHeight: "calc(100dvh - 134px)", overflowY: "auto", scrollbarWidth: "none", border: "1px solid #d9e8f7", borderRadius: 10, background: "#fff", padding: 8 }}>
+                <div style={{ display: "grid", justifyItems: "center", margin: "-2px 0 8px" }}>
+                  <button type="button" onClick={printReceiptAndClose} style={{ minWidth: 112, minHeight: 40, border: 0, borderRadius: 10, background: "#ff681f", color: "#fff", fontSize: 12, fontWeight: 950, boxShadow: "0 8px 18px rgba(255,104,31,0.18)" }}>{LABELS.printReceipt}</button>
+                </div>
                 <div style={{ display: "grid", justifyItems: "center", textAlign: "center", borderBottom: "1px dashed #c9dbf2", paddingBottom: 7 }}>
                   <ReceiptLogoImage src={receiptStoreProfile.logoUrl} alt={receiptStoreProfile.displayName || "CpIPOS"} />
                   <h3 style={{ margin: "4px 0 0", color: "#111827", fontSize: 15, fontWeight: 950 }}>{receiptStoreProfile.displayName || LABELS.storeName}</h3>
@@ -1136,10 +1138,7 @@ export function TakeawayCartShell({
                   <div style={{ display: "grid", gridTemplateColumns: "1fr auto" }}><span>{LABELS.change}</span><b>{BAHT}{money(receipt.change)}</b></div>
                 </div>
               </div>
-              <footer style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <button type="button" onClick={printReceiptAndClose} style={{ minHeight: 42, border: 0, borderRadius: 9, background: "#ff681f", color: "#fff", fontSize: 13, fontWeight: 950 }}>{LABELS.printReceipt}</button>
-                <button type="button" onClick={closeReceiptWindow} style={{ minHeight: 42, border: "1px solid #d9e8f7", borderRadius: 9, background: "#fff", color: "#0f2745", fontSize: 13, fontWeight: 900 }}>{LABELS.closeWindow}</button>
-              </footer>
+              <footer style={{ minHeight: 1 }} />
             </section>
           ) : null}
         </div>

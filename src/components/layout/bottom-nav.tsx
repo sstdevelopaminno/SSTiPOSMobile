@@ -50,7 +50,7 @@ export function BottomNav({ role }: { role: BranchRole }) {
           }}
         >
           <path
-            d="M22 8 H160 C178 8 178 36 215 36 C252 36 252 8 270 8 H408 C420 8 430 18 430 30 V62 C430 74 420 84 408 84 H22 C10 84 0 74 0 62 V30 C0 18 10 8 22 8 Z"
+            d="M22 8 H154 C176 8 178 44 215 44 C252 44 254 8 276 8 H408 C420 8 430 18 430 30 V62 C430 74 420 84 408 84 H22 C10 84 0 74 0 62 V30 C0 18 10 8 22 8 Z"
             fill="#fff"
             stroke="#cfe4fb"
             strokeWidth="1"
@@ -89,8 +89,8 @@ export function BottomNav({ role }: { role: BranchRole }) {
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "flex-start",
-                    gap: 1,
-                    paddingTop: 13,
+                    gap: 2,
+                    paddingTop: 0,
                     color: active ? "#1677d9" : "#214461",
                     textAlign: "center",
                     textDecoration: "none",
@@ -98,17 +98,38 @@ export function BottomNav({ role }: { role: BranchRole }) {
                     transition: "transform 180ms ease, color 180ms ease",
                   }}
                 >
-                  <Icon aria-hidden="true" size={30} strokeWidth={active ? 2.45 : 2.25} />
                   <span
+                    className="flex flex-col items-center justify-center rounded-full border bg-white"
                     style={{
+                      display: "flex",
+                      width: 56,
+                      height: 56,
+                      marginTop: -6,
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 1,
+                      border: active ? "1px solid #b7d8fb" : "1px solid #cfe4fb",
+                      borderRadius: 999,
+                      background: "#fff",
                       color: active ? "#1677d9" : "#214461",
-                      fontSize: 10,
-                      fontWeight: 900,
-                      lineHeight: 1.05,
-                      whiteSpace: "nowrap",
+                      boxShadow: active ? "0 7px 18px rgba(22, 119, 217, 0.2)" : "0 5px 14px rgba(22, 119, 217, 0.12)",
+                      transform: active ? "scale(1.03)" : "scale(1)",
+                      transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
                     }}
                   >
-                    {label}
+                    <Icon aria-hidden="true" size={28} strokeWidth={active ? 2.45 : 2.25} />
+                    <span
+                      style={{
+                        color: active ? "#1677d9" : "#214461",
+                        fontSize: 9,
+                        fontWeight: 900,
+                        lineHeight: 1.05,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {label}
+                    </span>
                   </span>
                 </Link>
               );

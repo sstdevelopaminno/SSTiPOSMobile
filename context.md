@@ -12,3 +12,4 @@ Authoritative rules:
 Implementation notes:
 - Mobile POS bottom navigation keeps the existing five route/permission-driven items and uses an integrated U-shaped concave center notch for `สินค้า`; the center item stays inside the bar, with no floating or detached center button.
 - Mobile takeaway receipts use the store `logo_url` when available and fall back to the full system logo `/brand/cpipos-logo.png`, matching the main SSTiPOS receipt fallback.
+- The sales home bell shows a red unread dot and opens an in-app notification list for current shift/order/product readiness notices.

@@ -1,9 +1,10 @@
 import { MobileAppShell } from "@/components/layout/mobile-app-shell";
 import { HeldOrdersLauncher } from "@/components/sales/held-orders-launcher";
 import { SalesModeActions } from "@/components/sales/sales-mode-actions";
+import { SalesNotificationBell, type SalesNotification } from "@/components/sales/sales-notification-bell";
 import { requireOpenShift } from "@/lib/permissions/guard";
 import { createServiceClient } from "@/lib/supabase/server";
-import { Bell, ChartNoAxesColumnIncreasing, CircleCheck, ClipboardList, PackageOpen, ShoppingCart, type LucideIcon } from "lucide-react";
+import { ChartNoAxesColumnIncreasing, CircleCheck, ClipboardList, PackageOpen, ShoppingCart, type LucideIcon } from "lucide-react";
 import Image from "next/image";
 
 function money(value: number) {
@@ -48,6 +49,30 @@ export default async function SalesPage() {
   const paidOrders = (orders ?? []).filter((order) => order.status === "paid" || order.status === "completed");
   const activeOrders = (orders ?? []).filter((order) => order.status !== "cancelled");
   const todayTotal = paidOrders.reduce((sum, order) => sum + Number(order.grand_total ?? order.total_amount ?? 0), 0);
+  const salesNotifications: SalesNotification[] = [
+    {
+      id: `shift-open-${shift.id}`,
+      title: "กะพร้อมขาย",
+      message: "เครื่องแคชเชียร์นี้เปิดกะแล้ว สามารถรับออเดอร์ได้",
+      tone: "success",
+    },
+  ];
+  if (activeOrders.length > 0) {
+    salesNotifications.push({
+      id: `active-orders-${shift.id}-${activeOrders.length}`,
+      title: "มีออเดอร์ในกะ",
+      message: `มีออเดอร์ในกะนี้ ${activeOrders.length} รายการ`,
+      tone: "info",
+    });
+  }
+  if (Number(productCount ?? 0) <= 0) {
+    salesNotifications.push({
+      id: `no-products-${scope.branchId}`,
+      title: "ยังไม่มีสินค้าพร้อมขาย",
+      message: "ตรวจสอบรายการสินค้าในเมนูสินค้า ก่อนเริ่มขายจริง",
+      tone: "warning",
+    });
+  }
 
   return (
     <MobileAppShell
@@ -62,7 +87,7 @@ export default async function SalesPage() {
         </div>
       }
       scope={scope}
-      action={<Bell size={24} color="#17416f" />}
+      action={<SalesNotificationBell notifications={salesNotifications} />}
     >
       <section className="grid gap-5">
         <div className="relative overflow-hidden rounded-[22px] border border-[#cfe3fa] bg-[#eaf6ff] p-4 shadow-[0_10px_26px_rgba(15,39,69,0.08)]">
