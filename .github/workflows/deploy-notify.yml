@@ -11,12 +11,52 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Wait for production deployment
-        run: sleep 90
+        run: sleep 120
 
       - name: Send mobile deployment notification
+        env:
+          DEPLOY_NOTIFY_SECRET: ${{ secrets.DEPLOY_NOTIFY_SECRET }}
+          VERSION: ${{ github.sha }}
         run: |
-          curl --fail --silent --show-error \
-            -X POST "https://sstiposmobile.vercel.app/api/system/notifications/deploy" \
-            -H "Content-Type: application/json" \
-            -H "x-deploy-notify-secret: ${{ secrets.DEPLOY_NOTIFY_SECRET }}" \
-            --data "{\"title\":\"CpIPOS Mobile อัปเดตแล้ว\",\"message\":\"ระบบอัปเดตเวอร์ชัน ${GITHUB_SHA::7} พร้อมใช้งาน\",\"version\":\"${GITHUB_SHA::7}\",\"url\":\"/sales\"}"
+          set -euo pipefail
+          SHORT_VERSION="${VERSION:0:7}"
+          BODY="$(printf '{"title":"CpIPOS Mobile อัปเดตแล้ว","message":"ระบบอัปเดตเวอร์ชัน %s พร้อมใช้งาน","version":"%s","url":"/sales"}' "$SHORT_VERSION" "$SHORT_VERSION")"
+
+          for attempt in 1 2 3; do
+            echo "Sending deploy notification attempt ${attempt}"
+            RESPONSE="$(curl --fail --silent --show-error \
+              -X POST "https://sstiposmobile.vercel.app/api/system/notifications/deploy" \
+              -H "Content-Type: application/json" \
+              -H "x-deploy-notify-secret: ${DEPLOY_NOTIFY_SECRET}" \
+              --data "${BODY}")"
+            echo "${RESPONSE}"
+
+            set +e
+            RESPONSE="${RESPONSE}" python - <<'PY'
+import json
+import os
+import sys
+
+payload = json.loads(os.environ["RESPONSE"])
+data = payload.get("data") or {}
+if data.get("configured") is False:
+    print("Web Push is not configured on production", file=sys.stderr)
+    sys.exit(2)
+if int(data.get("sent") or 0) > 0:
+    sys.exit(0)
+print("No active subscribers received the deploy notification", file=sys.stderr)
+sys.exit(1)
+PY
+            status=$?
+            set -e
+            if [ "$status" -eq 0 ]; then
+              exit 0
+            fi
+            if [ "$status" -eq 2 ]; then
+              exit 2
+            fi
+            sleep 30
+          done
+
+          echo "Deploy notification did not reach any active subscriber after retries" >&2
+          exit 1

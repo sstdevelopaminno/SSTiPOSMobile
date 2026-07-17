@@ -1,4 +1,4 @@
-const SW_VERSION = "sstipos-mobile-2026-07-16-deploy-push";
+const SW_VERSION = "sstipos-mobile-2026-07-18-notifications";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -15,6 +15,12 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("fetch", () => {
   // Network-first by default. Avoid stale POS/auth data and keep the PWA stable.
 });
@@ -28,18 +34,30 @@ self.addEventListener("push", (event) => {
   }
 
   const title = payload.title || "CpIPOS Mobile";
+  const body = payload.body || payload.message || "มีการแจ้งเตือนใหม่";
   const options = {
-    body: payload.body || payload.message || "มีการแจ้งเตือนใหม่",
+    body,
     icon: payload.icon || "/brand/cpipos-icon-transparent-192.png",
     badge: payload.badge || "/brand/cpipos-icon-transparent-192.png",
-    tag: payload.tag || "sstipos-mobile-push",
-    renotify: Boolean(payload.renotify),
+    tag: payload.tag || `sstipos-mobile-push-${Date.now()}`,
+    renotify: payload.renotify !== false,
     data: {
       url: payload.url || "/sales",
     },
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil((async () => {
+    const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const client of clients) {
+      client.postMessage({
+        type: "SSTIPOS_PUSH_NOTICE",
+        title,
+        message: body,
+        url: options.data.url,
+      });
+    }
+    await self.registration.showNotification(title, options);
+  })());
 });
 
 self.addEventListener("notificationclick", (event) => {

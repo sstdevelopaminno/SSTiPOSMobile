@@ -15,6 +15,8 @@ type SendOptions = {
   url?: string;
   tenantId?: string;
   branchId?: string;
+  tag?: string;
+  renotify?: boolean;
 };
 
 export async function sendMobilePush(options: SendOptions) {
@@ -43,6 +45,10 @@ export async function sendMobilePush(options: SendOptions) {
     title: options.title,
     body: options.message,
     url: options.url?.startsWith("/") ? options.url : "/sales",
+    icon: "/brand/cpipos-icon-transparent-192.png",
+    badge: "/brand/cpipos-icon-transparent-192.png",
+    tag: options.tag,
+    renotify: options.renotify,
   });
 
   let sent = 0;

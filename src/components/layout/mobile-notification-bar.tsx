@@ -3,7 +3,6 @@
 import { Bell, RefreshCcw, WifiOff, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const APP_NOTICE_VERSION = "2026-07-16-deploy-push";
 const NOTICE_STORAGE_KEY = "sstipos_mobile_notice_version";
 
 type Notice = {
@@ -15,6 +14,10 @@ type Notice = {
 
 type PushKeyResponse = {
   data?: { enabled?: boolean; publicKey?: string | null };
+};
+
+type VersionResponse = {
+  data?: { version?: string | null; environment?: string | null };
 };
 
 function canUseSystemNotifications() {
@@ -40,10 +43,10 @@ async function showSystemNotification(title: string, message: string) {
       body: message,
       icon: "/brand/cpipos-icon-transparent-192.png",
       badge: "/brand/cpipos-icon-transparent-192.png",
-      tag: "sstipos-mobile-notice",
+      tag: `sstipos-mobile-notice-${Date.now()}`,
     });
   } catch {
-    // In-app banner remains available even when the OS notification channel fails.
+    // The in-app banner remains available when the OS notification channel is blocked.
   }
 }
 
@@ -76,49 +79,68 @@ export function MobileNotificationBar() {
     const isStandalone = window.matchMedia("(display-mode: standalone)").matches || (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
     setStandalone(isStandalone);
 
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    async function registerServiceWorker() {
+      if (!("serviceWorker" in navigator)) return;
+      const registration = await navigator.serviceWorker.register("/sw.js").catch(() => null);
+      if (registration?.waiting) registration.waiting.postMessage({ type: "SKIP_WAITING" });
+
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (event.data?.type === "SSTIPOS_SW_READY") {
           window.dispatchEvent(new CustomEvent("sstipos:notify", {
-            detail: { title: "PWA พร้อมใช้งาน", message: "ระบบพร้อมทำงานบนมือถือแล้ว", tone: "success" },
+            detail: { title: "PWA พร้อมใช้งาน", message: "ระบบแจ้งเตือนพร้อมทำงานบนมือถือแล้ว", tone: "success" },
+          }));
+        }
+        if (event.data?.type === "SSTIPOS_PUSH_NOTICE") {
+          window.dispatchEvent(new CustomEvent("sstipos:notify", {
+            detail: { title: event.data.title, message: event.data.message, tone: "success" },
           }));
         }
       });
     }
 
-    if (canUseSystemNotifications()) {
-      fetch("/api/mobile/notifications/vapid-public-key", { cache: "no-store" })
-        .then((response) => response.json() as Promise<PushKeyResponse>)
-        .then((json) => {
-          const publicKey = json.data?.enabled ? json.data.publicKey : null;
-          if (!publicKey) return;
-          setPushPublicKey(publicKey);
-          if (Notification.permission === "default") {
-            setNotice({
-              title: "เปิดแจ้งเตือนมือถือ",
-              message: "กดเปิดเพื่อรับแจ้งเตือนแม้ปิดแอปอยู่",
-              tone: "info",
-              action: "permission",
-            });
-          } else if (Notification.permission === "granted") {
-            void subscribeToPush(publicKey);
-          }
-        })
-        .catch(() => undefined);
+    async function setupPush() {
+      if (!canUseSystemNotifications()) return;
+      const response = await fetch("/api/mobile/notifications/vapid-public-key", { cache: "no-store" }).catch(() => null);
+      const json = response ? await response.json().catch(() => null) as PushKeyResponse | null : null;
+      const publicKey = json?.data?.enabled ? json.data.publicKey : null;
+      if (!publicKey) return;
+      setPushPublicKey(publicKey);
+
+      if (Notification.permission === "default") {
+        setNotice({
+          title: "เปิดแจ้งเตือนมือถือ",
+          message: "กดเปิดเพื่อรับแจ้งเตือนหลังอัปเดต แม้ปิดแอปอยู่",
+          tone: "info",
+          action: "permission",
+        });
+      } else if (Notification.permission === "granted") {
+        void subscribeToPush(publicKey);
+      }
     }
 
-    const previousVersion = localStorage.getItem(NOTICE_STORAGE_KEY);
-    if (previousVersion !== APP_NOTICE_VERSION) {
-      localStorage.setItem(NOTICE_STORAGE_KEY, APP_NOTICE_VERSION);
+    async function checkDeployedVersion() {
+      const response = await fetch("/api/system/version", { cache: "no-store" }).catch(() => null);
+      const json = response ? await response.json().catch(() => null) as VersionResponse | null : null;
+      const version = json?.data?.version;
+      if (!version || version === "local") return;
+
+      const previousVersion = localStorage.getItem(NOTICE_STORAGE_KEY);
+      if (previousVersion === version) return;
+      localStorage.setItem(NOTICE_STORAGE_KEY, version);
+
       const updateNotice: Notice = {
-        title: "อัปเดตระบบใหม่",
-        message: "เพิ่มแจ้งเตือนหลัง deploy และปรับ Web Push ให้เสถียรขึ้น",
-        tone: "info",
+        title: "CpIPOS Mobile อัปเดตแล้ว",
+        message: `ระบบอัปเดตเวอร์ชัน ${version} พร้อมใช้งาน`,
+        tone: "success",
+        action: "reload",
       };
       setNotice(updateNotice);
       void showSystemNotification(updateNotice.title, updateNotice.message);
     }
+
+    void registerServiceWorker();
+    void setupPush();
+    void checkDeployedVersion();
 
     const handleOffline = () => setNotice({ title: "ออฟไลน์", message: "อินเทอร์เน็ตหลุด ระบบอาจตอบสนองช้า", tone: "warning" });
     const handleOnline = () => setNotice({ title: "ออนไลน์แล้ว", message: "เชื่อมต่ออินเทอร์เน็ตกลับมาแล้ว", tone: "success" });
@@ -131,7 +153,6 @@ export function MobileNotificationBar() {
         tone: detail.tone ?? "info",
         action: detail.action,
       });
-      void showSystemNotification(detail.title, detail.message);
     };
 
     window.addEventListener("offline", handleOffline);
@@ -157,8 +178,8 @@ export function MobileNotificationBar() {
     if (!pushPublicKey) return;
     const subscribed = await subscribeToPush(pushPublicKey).catch(() => false);
     setNotice(subscribed
-      ? { title: "เปิดแจ้งเตือนแล้ว", message: "ระบบจะส่งแจ้งเตือนผ่านมือถือเมื่อมีประกาศใหม่", tone: "success" }
-      : { title: "เปิดแจ้งเตือนไม่สำเร็จ", message: "ตรวจสอบสิทธิ์แจ้งเตือนของ Chrome หรือการตั้งค่า PWA", tone: "warning" });
+      ? { title: "เปิดแจ้งเตือนแล้ว", message: "ระบบจะส่งแจ้งเตือนผ่านมือถือเมื่อมีอัปเดตใหม่", tone: "success" }
+      : { title: "เปิดแจ้งเตือนไม่สำเร็จ", message: "ตรวจสอบสิทธิ์แจ้งเตือนของ Chrome หรือการติดตั้ง PWA", tone: "warning" });
   }
 
   return (

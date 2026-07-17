@@ -25,6 +25,8 @@ export async function POST(request: Request) {
       title,
       message,
       url: body?.url?.startsWith("/") ? body.url : "/sales",
+      tag: version ? `sstipos-deploy-${version}` : `sstipos-deploy-${Date.now()}`,
+      renotify: true,
     }));
   } catch (error) {
     console.error("[system.notifications.deploy]", error);

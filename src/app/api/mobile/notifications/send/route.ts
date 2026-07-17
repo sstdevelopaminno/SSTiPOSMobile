@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const message = body?.message?.trim() || "มีการแจ้งเตือนใหม่";
     const url = body?.url?.startsWith("/") ? body.url : "/sales";
 
-    return ok(await sendMobilePush({ title, message, url, tenantId: scope.tenantId, branchId: scope.branchId }));
+    return ok(await sendMobilePush({ title, message, url, tenantId: scope.tenantId, branchId: scope.branchId, tag: `manual-${Date.now()}`, renotify: true }));
   } catch (error) {
     console.error("[mobile.notifications.send]", error);
     return fail("push_send_failed", "ส่งแจ้งเตือนไม่สำเร็จ", 503);
