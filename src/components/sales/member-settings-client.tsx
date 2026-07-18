@@ -152,18 +152,18 @@ export function MemberSettingsClient() {
         <select name="pointsMode" value={settings.pointsMode} onChange={(event) => setSettings((prev) => ({ ...prev, pointsMode: event.target.value as RewardMode }))} className="mb-3 h-12 w-full rounded-[14px] border border-[#cfe3ff] bg-white px-3 text-[14px] font-black text-[#0f2745]">
           {modeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
         </select>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
           <label className="text-[12px] font-black text-[#587398]">
             บาทต่อรอบ
-            <input name="amountPerPoint" type="number" min="1" value={settings.amountPerPoint} onChange={(event) => setSettings((prev) => ({ ...prev, amountPerPoint: Number(event.target.value) }))} className="mt-1 h-11 w-full rounded-[14px] border border-[#cfe3ff] px-3 text-[15px] text-[#0f2745]" />
+            <input name="amountPerPoint" type="number" min="1" value={settings.amountPerPoint} onChange={(event) => setSettings((prev) => ({ ...prev, amountPerPoint: Number(event.target.value) }))} className="mt-1 h-11 w-full min-w-0 rounded-[14px] border border-[#cfe3ff] px-3 text-[15px] text-[#0f2745]" />
           </label>
           <label className="text-[12px] font-black text-[#587398]">
             คะแนนต่อรอบ
-            <input name="pointsPerAmount" type="number" min="0" value={settings.pointsPerAmount} onChange={(event) => setSettings((prev) => ({ ...prev, pointsPerAmount: Number(event.target.value) }))} className="mt-1 h-11 w-full rounded-[14px] border border-[#cfe3ff] px-3 text-[15px] text-[#0f2745]" />
+            <input name="pointsPerAmount" type="number" min="0" value={settings.pointsPerAmount} onChange={(event) => setSettings((prev) => ({ ...prev, pointsPerAmount: Number(event.target.value) }))} className="mt-1 h-11 w-full min-w-0 rounded-[14px] border border-[#cfe3ff] px-3 text-[15px] text-[#0f2745]" />
           </label>
           <label className="col-span-2 text-[12px] font-black text-[#587398]">
             คะแนนคงที่ต่อบิล
-            <input name="fixedPointsPerBill" type="number" min="0" value={settings.fixedPointsPerBill} onChange={(event) => setSettings((prev) => ({ ...prev, fixedPointsPerBill: Number(event.target.value) }))} className="mt-1 h-11 w-full rounded-[14px] border border-[#cfe3ff] px-3 text-[15px] text-[#0f2745]" />
+            <input name="fixedPointsPerBill" type="number" min="0" value={settings.fixedPointsPerBill} onChange={(event) => setSettings((prev) => ({ ...prev, fixedPointsPerBill: Number(event.target.value) }))} className="mt-1 h-11 w-full min-w-0 rounded-[14px] border border-[#cfe3ff] px-3 text-[15px] text-[#0f2745]" />
           </label>
         </div>
       </section>
@@ -174,18 +174,18 @@ export function MemberSettingsClient() {
         <select name="stampsMode" value={settings.stampsMode} onChange={(event) => setSettings((prev) => ({ ...prev, stampsMode: event.target.value as RewardMode }))} className="mb-3 h-12 w-full rounded-[14px] border border-[#cfe3ff] bg-white px-3 text-[14px] font-black text-[#0f2745]">
           {modeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
         </select>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
           <label className="text-[12px] font-black text-[#587398]">
             บาทต่อรอบ
-            <input name="amountPerStamp" type="number" min="1" value={settings.amountPerStamp} onChange={(event) => setSettings((prev) => ({ ...prev, amountPerStamp: Number(event.target.value) }))} className="mt-1 h-11 w-full rounded-[14px] border border-[#cfe3ff] px-3 text-[15px] text-[#0f2745]" />
+            <input name="amountPerStamp" type="number" min="1" value={settings.amountPerStamp} onChange={(event) => setSettings((prev) => ({ ...prev, amountPerStamp: Number(event.target.value) }))} className="mt-1 h-11 w-full min-w-0 rounded-[14px] border border-[#cfe3ff] px-3 text-[15px] text-[#0f2745]" />
           </label>
           <label className="text-[12px] font-black text-[#587398]">
             แต้มต่อรอบ
-            <input name="stampsPerAmount" type="number" min="0" value={settings.stampsPerAmount} onChange={(event) => setSettings((prev) => ({ ...prev, stampsPerAmount: Number(event.target.value) }))} className="mt-1 h-11 w-full rounded-[14px] border border-[#cfe3ff] px-3 text-[15px] text-[#0f2745]" />
+            <input name="stampsPerAmount" type="number" min="0" value={settings.stampsPerAmount} onChange={(event) => setSettings((prev) => ({ ...prev, stampsPerAmount: Number(event.target.value) }))} className="mt-1 h-11 w-full min-w-0 rounded-[14px] border border-[#cfe3ff] px-3 text-[15px] text-[#0f2745]" />
           </label>
           <label className="col-span-2 text-[12px] font-black text-[#587398]">
             แต้มคงที่ต่อบิล
-            <input name="fixedStampsPerBill" type="number" min="0" value={settings.fixedStampsPerBill} onChange={(event) => setSettings((prev) => ({ ...prev, fixedStampsPerBill: Number(event.target.value) }))} className="mt-1 h-11 w-full rounded-[14px] border border-[#cfe3ff] px-3 text-[15px] text-[#0f2745]" />
+            <input name="fixedStampsPerBill" type="number" min="0" value={settings.fixedStampsPerBill} onChange={(event) => setSettings((prev) => ({ ...prev, fixedStampsPerBill: Number(event.target.value) }))} className="mt-1 h-11 w-full min-w-0 rounded-[14px] border border-[#cfe3ff] px-3 text-[15px] text-[#0f2745]" />
           </label>
         </div>
       </section>
@@ -205,7 +205,7 @@ export function MemberSettingsClient() {
         </div>
         <label className="mt-4 block text-[12px] font-black text-[#587398]">
           อายุ QR token (นาที)
-          <input name="qrTokenTtlMinutes" type="number" min="1" max="1440" value={settings.qrTokenTtlMinutes} onChange={(event) => setSettings((prev) => ({ ...prev, qrTokenTtlMinutes: Number(event.target.value) }))} className="mt-1 h-11 w-full rounded-[14px] border border-[#cfe3ff] px-3 text-[15px] text-[#0f2745]" />
+          <input name="qrTokenTtlMinutes" type="number" min="1" max="1440" value={settings.qrTokenTtlMinutes} onChange={(event) => setSettings((prev) => ({ ...prev, qrTokenTtlMinutes: Number(event.target.value) }))} className="mt-1 h-11 w-full min-w-0 rounded-[14px] border border-[#cfe3ff] px-3 text-[15px] text-[#0f2745]" />
         </label>
         <div className="mt-3 flex gap-2">
           <input value={qrCode} onChange={(event) => setQrCode(event.target.value)} placeholder="สแกนหรือกรอกรหัส QR" className="h-11 min-w-0 flex-1 rounded-[14px] border border-[#cfe3ff] px-3 text-[14px] font-bold text-[#0f2745]" />

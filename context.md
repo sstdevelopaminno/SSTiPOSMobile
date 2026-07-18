@@ -15,3 +15,6 @@ Implementation notes:
 - The sales home bell shows a red unread dot and opens an in-app notification list for current shift/order/product readiness notices.
 - The sales shortcut row pairs `รายการพัก` with a square `สมาชิก` action, and the three sales mode cards use consistent Lucide icons.
 - The mobile stock/product management page uses a table-like responsive list without product images or row sequence numbers, keeping search, tabs, pagination, edit/delete, and add-item handlers wired to the existing stock data flow.
+- Closing a mobile cashier shift records the closing cash and shift summary in the existing `shifts` table, then revokes the current POS session and sends the operator back to branch selection.
+- Mobile takeaway bill hold first uses the reviewed RPC when available, and falls back to scoped writes against existing `orders` and `order_items` tables when the RPC signature is unavailable.
+- The sales home keeps the compact CpIPOS symbol-plus-text brand mark. Its `สินค้าพร้อมขาย` stat opens `/sales/stock-readiness`, a mobile readiness dashboard with today's sales, shift order count, category-filtered active products with 5-item pagination, ingredient quantities, and latest shift orders.

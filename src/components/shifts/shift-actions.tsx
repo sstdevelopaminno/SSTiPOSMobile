@@ -15,6 +15,19 @@ function shiftErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "ทำรายการปิดยอดไม่สำเร็จ";
 }
 
+async function logoutToBranchSelection() {
+  const response = await fetch("/api/auth/session/logout", {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    cache: "no-store",
+    credentials: "same-origin",
+    body: JSON.stringify({ action: "switch_branch" }),
+  });
+  const json = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(json?.error?.message ?? "ออกจากระบบไม่สำเร็จ");
+  return json?.data?.redirectTo ?? "/login/branch";
+}
+
 function normalizeCashInput(value: string) {
   return value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1").slice(0, 12);
 }
@@ -61,7 +74,12 @@ export function ShiftActions({ hasOpenShift, expectedCash = 0 }: { hasOpenShift:
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error?.message ?? "ทำรายการปิดยอดไม่สำเร็จ");
-      const redirectTo = json?.data?.redirectTo ?? (action === "open" ? "/sales" : "/shifts");
+      if (action === "close") {
+        const redirectTo = await logoutToBranchSelection();
+        router.replace(redirectTo);
+        return;
+      }
+      const redirectTo = json?.data?.redirectTo ?? "/sales";
       router.push(redirectTo);
     } catch (err) {
       setError(shiftErrorMessage(err));

@@ -6,8 +6,9 @@ import { SalesModeActions } from "@/components/sales/sales-mode-actions";
 import { SalesNotificationBell, type SalesNotification } from "@/components/sales/sales-notification-bell";
 import { requireOpenShift } from "@/lib/permissions/guard";
 import { createServiceClient } from "@/lib/supabase/server";
-import { ChartNoAxesColumnIncreasing, CircleCheck, ClipboardList, PackageOpen, ShoppingCart, type LucideIcon } from "lucide-react";
+import { ChartNoAxesColumnIncreasing, CircleCheck, ClipboardList, PackageOpen, type LucideIcon } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -16,9 +17,9 @@ function money(value: number) {
   return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function StatCard({ icon: Icon, label, value, tone }: { icon: LucideIcon; label: string; value: string; tone: string }) {
-  return (
-    <div className="min-h-[104px] rounded-[18px] border border-[#d4e5f8] bg-white p-3.5 shadow-[0_8px_20px_rgba(15,39,69,0.06)]">
+function StatCard({ icon: Icon, label, value, tone, href }: { icon: LucideIcon; label: string; value: string; tone: string; href?: string }) {
+  const content = (
+    <>
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-[12px] font-black leading-tight text-[#6a7f99]">{label}</span>
         <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] ${tone}`}>
@@ -26,6 +27,21 @@ function StatCard({ icon: Icon, label, value, tone }: { icon: LucideIcon; label:
         </span>
       </div>
       <p className="m-0 text-[20px] font-black leading-tight text-[#031f3d]">{value}</p>
+    </>
+  );
+  const className = "min-h-[104px] rounded-[18px] border border-[#d4e5f8] bg-white p-3.5 shadow-[0_8px_20px_rgba(15,39,69,0.06)] outline-none transition active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#1677d9] focus-visible:ring-offset-2";
+
+  if (href) {
+    return (
+      <Link href={href} className={`${className} block no-underline`} aria-label={`${label} ${value}`}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <div className={className}>
+      {content}
     </div>
   );
 }
@@ -83,11 +99,11 @@ export default async function SalesPage() {
     <MobileAppShell
       brand={
         <div className="mb-1 flex items-center gap-3">
-          <span className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-[0_8px_20px_rgba(15,39,69,0.08)]">
-            <Image src="/brand/cpipos-symbol.png" alt="CpIPOS" width={72} height={72} className="h-9 w-9 object-contain" priority />
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-white shadow-[0_8px_18px_rgba(15,39,69,0.06)]">
+            <Image src="/brand/cpipos-icon-transparent-180.png" alt="CpIPOS" width={36} height={36} className="h-8 w-8 object-contain" priority />
           </span>
-          <span className="text-[18px] font-black leading-none tracking-normal text-[#0f2745]">
-            Cp<span className="text-[#0b80e8]">IPOS</span>
+          <span className="text-[20px] font-black leading-none text-[#031f3d]">
+            CpI<span className="text-[#1677d9]">POS</span>
           </span>
         </div>
       }
@@ -101,10 +117,10 @@ export default async function SalesPage() {
     >
       <section className="grid gap-5">
         <div className="relative overflow-hidden rounded-[22px] border border-[#cfe3fa] bg-[#eaf6ff] p-4 shadow-[0_10px_26px_rgba(15,39,69,0.08)]">
-          <Image src="/brand/cpipos-symbol.png" alt="" width={240} height={240} className="pointer-events-none absolute -right-11 -top-14 h-40 w-40 object-contain opacity-[0.08]" aria-hidden="true" />
+          <Image src="/brand/cpipos-icon-transparent-512.png" alt="" width={180} height={180} className="pointer-events-none absolute -right-9 -top-9 h-28 w-28 object-contain opacity-[0.08]" aria-hidden="true" />
           <div className="relative flex items-center gap-4">
             <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] bg-white text-[#1677d9] shadow-sm">
-              <ShoppingCart size={36} strokeWidth={2.3} />
+              <Image src="/brand/pos-terminal.svg" alt="" width={52} height={52} className="h-12 w-12 object-contain" aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -132,7 +148,7 @@ export default async function SalesPage() {
         <div className="grid grid-cols-3 gap-3">
           <StatCard icon={ChartNoAxesColumnIncreasing} label="ยอดขายวันนี้" value={`${money(todayTotal)} ฿`} tone="bg-[#f0f6ff] text-[#1677d9]" />
           <StatCard icon={ClipboardList} label="ออเดอร์ในกะ" value={String(activeOrders.length)} tone="bg-[#f0f6ff] text-[#1677d9]" />
-          <StatCard icon={PackageOpen} label="สินค้าพร้อมขาย" value={String(productCount ?? 0)} tone="bg-[#f0f6ff] text-[#1677d9]" />
+          <StatCard icon={PackageOpen} label="สินค้าพร้อมขาย" value={String(productCount ?? 0)} tone="bg-[#f0f6ff] text-[#1677d9]" href="/sales/stock-readiness" />
         </div>
       </section>
     </MobileAppShell>

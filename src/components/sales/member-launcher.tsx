@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Award, History, Plus, Search, Star, UserRound, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -308,7 +308,7 @@ export function MemberLauncher({ orderId, selectedMember, compact = false, disab
                 <button type="button" onClick={() => void loadMembers()} className="min-h-11 rounded-[14px] border border-[#cfe3fa] bg-white px-3 text-[12px] font-black text-[#1677d9]">ค้นหา</button>
               </div>
 
-              <div className="mb-3 grid grid-cols-2 gap-2">
+              <div className="mb-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
                 <button type="button" onClick={() => setMode("list")} className={`min-h-10 rounded-[14px] border px-3 text-[12px] font-black ${mode === "list" || mode === "detail" ? "border-[#1677d9] bg-[#eef6ff] text-[#1677d9]" : "border-[#d9e8f7] bg-white text-[#587398]"}`}>รายชื่อสมาชิก</button>
                 <button type="button" onClick={() => setMode("add")} className={`flex min-h-10 items-center justify-center gap-1 rounded-[14px] border px-3 text-[12px] font-black ${mode === "add" ? "border-[#1677d9] bg-[#eef6ff] text-[#1677d9]" : "border-[#d9e8f7] bg-white text-[#587398]"}`}><Plus size={15} /> เพิ่มสมาชิก</button>
               </div>
@@ -317,11 +317,11 @@ export function MemberLauncher({ orderId, selectedMember, compact = false, disab
 
               {mode === "add" ? (
                 <div className="grid gap-3 rounded-[18px] border border-[#d9e8f7] bg-[#f8fbff] p-3">
-                  <label className="grid gap-1 text-[12px] font-black text-[#587398]">ชื่อสมาชิก<input value={name} onChange={(event) => setName(event.target.value)} className="min-h-11 rounded-[13px] border border-[#d9e8f7] bg-white px-3 text-[14px] font-bold text-[#0f2745] outline-none" /></label>
-                  <label className="grid gap-1 text-[12px] font-black text-[#587398]">เบอร์โทร<input value={phone} onChange={(event) => setPhone(digitsOnly(event.target.value))} inputMode="tel" className="min-h-11 rounded-[13px] border border-[#d9e8f7] bg-white px-3 text-[14px] font-bold text-[#0f2745] outline-none" /></label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="grid gap-1 text-[12px] font-black text-[#587398]">คะแนนเริ่มต้น<input value={earnedPoints} onChange={(event) => setEarnedPoints(digitsOnly(event.target.value))} inputMode="numeric" className="min-h-11 rounded-[13px] border border-[#d9e8f7] bg-white px-3 text-[14px] font-bold text-[#0f2745] outline-none" /></label>
-                    <label className="grid gap-1 text-[12px] font-black text-[#587398]">แต้มเริ่มต้น<input value={earnedStamps} onChange={(event) => setEarnedStamps(digitsOnly(event.target.value))} inputMode="numeric" className="min-h-11 rounded-[13px] border border-[#d9e8f7] bg-white px-3 text-[14px] font-bold text-[#0f2745] outline-none" /></label>
+                  <label className="grid min-w-0 gap-1 text-[12px] font-black text-[#587398]">ชื่อสมาชิก<input value={name} onChange={(event) => setName(event.target.value)} className="min-h-11 min-w-0 rounded-[13px] border border-[#d9e8f7] bg-white px-3 text-[14px] font-bold text-[#0f2745] outline-none" /></label>
+                  <label className="grid min-w-0 gap-1 text-[12px] font-black text-[#587398]">เบอร์โทร<input value={phone} onChange={(event) => setPhone(digitsOnly(event.target.value))} inputMode="tel" className="min-h-11 min-w-0 rounded-[13px] border border-[#d9e8f7] bg-white px-3 text-[14px] font-bold text-[#0f2745] outline-none" /></label>
+                  <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                    <label className="grid min-w-0 gap-1 text-[12px] font-black text-[#587398]">คะแนนเริ่มต้น<input value={earnedPoints} onChange={(event) => setEarnedPoints(digitsOnly(event.target.value))} inputMode="numeric" className="min-h-11 min-w-0 rounded-[13px] border border-[#d9e8f7] bg-white px-3 text-[14px] font-bold text-[#0f2745] outline-none" /></label>
+                    <label className="grid min-w-0 gap-1 text-[12px] font-black text-[#587398]">แต้มเริ่มต้น<input value={earnedStamps} onChange={(event) => setEarnedStamps(digitsOnly(event.target.value))} inputMode="numeric" className="min-h-11 min-w-0 rounded-[13px] border border-[#d9e8f7] bg-white px-3 text-[14px] font-bold text-[#0f2745] outline-none" /></label>
                   </div>
                   <button type="button" onClick={() => void createMember()} disabled={loading} className="min-h-11 rounded-[14px] border-0 bg-[#1677d9] px-4 text-[14px] font-black text-white disabled:opacity-60">บันทึกสมาชิก</button>
                 </div>
@@ -334,7 +334,7 @@ export function MemberLauncher({ orderId, selectedMember, compact = false, disab
                   {members.map((member) => (
                     <button key={member.id} type="button" onClick={() => void openRemoteDetail(member)} className="grid min-h-[74px] grid-cols-[1fr_auto] items-center gap-3 rounded-[16px] border border-[#d9e8f7] bg-white p-3 text-left shadow-[0_4px_12px_rgba(15,39,69,0.05)]">
                       <span className="min-w-0"><b className="block truncate text-[15px] font-black text-[#0f2745]">{member.name}</b><span className="mt-1 block text-[12px] font-bold text-[#587398]">{member.phone}</span></span>
-                      <span className="grid grid-cols-2 gap-2 text-center"><span className="rounded-[12px] bg-[#eef6ff] px-2 py-1 text-[11px] font-black text-[#1677d9]">{member.points} คะแนน</span><span className="rounded-[12px] bg-[#fff6e8] px-2 py-1 text-[11px] font-black text-[#d98600]">{member.stamps} แต้ม</span></span>
+                      <span className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 text-center"><span className="rounded-[12px] bg-[#eef6ff] px-2 py-1 text-[11px] font-black text-[#1677d9]">{member.points} คะแนน</span><span className="rounded-[12px] bg-[#fff6e8] px-2 py-1 text-[11px] font-black text-[#d98600]">{member.stamps} แต้ม</span></span>
                     </button>
                   ))}
                 </div>
@@ -344,12 +344,12 @@ export function MemberLauncher({ orderId, selectedMember, compact = false, disab
                 <div className="grid gap-3">
                   <section className="rounded-[18px] border border-[#cfe3fa] bg-[#f8fbff] p-4">
                     <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="m-0 truncate text-[18px] font-black text-[#0f2745]">{activeMember.name}</h3><p className="m-0 mt-1 text-[13px] font-bold text-[#587398]">{activeMember.phone}</p></div><UserRound className="h-8 w-8 shrink-0 text-[#1677d9]" /></div>
-                    <div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-[14px] bg-white p-3"><Star className="mb-1 h-5 w-5 text-[#1677d9]" /><p className="m-0 text-[11px] font-black text-[#587398]">คะแนนสะสม</p><b className="mt-1 block text-[22px] text-[#0f2745]">{activeMember.points}</b></div><div className="rounded-[14px] bg-white p-3"><Award className="mb-1 h-5 w-5 text-[#d98600]" /><p className="m-0 text-[11px] font-black text-[#587398]">แต้มสะสม</p><b className="mt-1 block text-[22px] text-[#0f2745]">{activeMember.stamps}</b></div></div>
+                    <div className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2"><div className="rounded-[14px] bg-white p-3"><Star className="mb-1 h-5 w-5 text-[#1677d9]" /><p className="m-0 text-[11px] font-black text-[#587398]">คะแนนสะสม</p><b className="mt-1 block text-[22px] text-[#0f2745]">{activeMember.points}</b></div><div className="rounded-[14px] bg-white p-3"><Award className="mb-1 h-5 w-5 text-[#d98600]" /><p className="m-0 text-[11px] font-black text-[#587398]">แต้มสะสม</p><b className="mt-1 block text-[22px] text-[#0f2745]">{activeMember.stamps}</b></div></div>
                   </section>
 
                   <section className="grid gap-2 rounded-[18px] border border-[#d9e8f7] bg-white p-3">
                     <p className="m-0 text-[13px] font-black text-[#0f2745]">{canAttachToBill ? "ผูกกับบิลนี้" : "เลือกคะแนนและแต้ม"}</p>
-                    <div className="grid grid-cols-2 gap-2"><label className="grid gap-1 text-[12px] font-black text-[#587398]">คะแนน<input value={earnedPoints} onChange={(event) => setEarnedPoints(digitsOnly(event.target.value))} inputMode="numeric" className="min-h-10 rounded-[13px] border border-[#d9e8f7] bg-[#f8fbff] px-3 text-[14px] font-bold text-[#0f2745] outline-none" /></label><label className="grid gap-1 text-[12px] font-black text-[#587398]">แต้ม<input value={earnedStamps} onChange={(event) => setEarnedStamps(digitsOnly(event.target.value))} inputMode="numeric" className="min-h-10 rounded-[13px] border border-[#d9e8f7] bg-[#f8fbff] px-3 text-[14px] font-bold text-[#0f2745] outline-none" /></label></div>
+                    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2"><label className="grid min-w-0 gap-1 text-[12px] font-black text-[#587398]">คะแนน<input value={earnedPoints} onChange={(event) => setEarnedPoints(digitsOnly(event.target.value))} inputMode="numeric" className="min-h-10 min-w-0 rounded-[13px] border border-[#d9e8f7] bg-[#f8fbff] px-3 text-[14px] font-bold text-[#0f2745] outline-none" /></label><label className="grid min-w-0 gap-1 text-[12px] font-black text-[#587398]">แต้ม<input value={earnedStamps} onChange={(event) => setEarnedStamps(digitsOnly(event.target.value))} inputMode="numeric" className="min-h-10 min-w-0 rounded-[13px] border border-[#d9e8f7] bg-[#f8fbff] px-3 text-[14px] font-bold text-[#0f2745] outline-none" /></label></div>
                     <div className="grid grid-cols-[1fr_auto] gap-2">
                       <button type="button" onClick={() => void attachToBill()} disabled={loading} className="min-h-11 rounded-[14px] border-0 bg-[#1677d9] px-3 text-[14px] font-black text-white disabled:opacity-60">{canAttachToBill ? "ใช้สมาชิกกับบิลนี้" : "เลือกสมาชิกนี้"}</button>
                       <button type="button" onClick={() => setShowHistory((value) => !value)} className="flex min-h-11 items-center justify-center gap-1 rounded-[14px] border border-[#d9e8f7] bg-white px-3 text-[12px] font-black text-[#17416f]">

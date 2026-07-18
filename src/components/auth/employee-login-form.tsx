@@ -103,7 +103,8 @@ export function EmployeeLoginForm({ branchName }: { branchName: string }) {
             />
             <button
               type="button"
-              className="ml-2 flex h-10 w-10 touch-manipulation items-center justify-center rounded-lg text-[#38669b] transition active:bg-[#eef6ff] disabled:opacity-50"
+              className="relative z-10 ml-2 flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-lg text-[#38669b] outline-none transition active:bg-[#eef6ff] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-[#1677d9] focus-visible:ring-offset-2"
+              onMouseDown={(event) => event.preventDefault()}
               onClick={revealTemporarily}
               disabled={loading || employeeCode.length === 0}
               aria-label={showCode ? "ซ่อนรหัสพนักงาน" : "แสดงรหัสพนักงาน"}
