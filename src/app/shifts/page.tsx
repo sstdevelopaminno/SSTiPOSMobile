@@ -4,6 +4,9 @@ import { requireMobileSession } from "@/lib/permissions/guard";
 import { createServiceClient } from "@/lib/supabase/server";
 import { Banknote, Clock, Landmark, Monitor, Store } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function money(value: number | null | undefined) {
   return Number(value ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }

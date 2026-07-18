@@ -3,6 +3,9 @@ import { TakeawayCartShell, type ReceiptStoreProfile, type TakeawayCategory, typ
 import { requireOpenShift } from "@/lib/permissions/guard";
 import { createServiceClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type ProductRow = {
   id: string;
   sku: string | null;
@@ -44,6 +47,11 @@ type DraftItemRow = {
   quantity: number | null;
 };
 
+type SupabaseWriteError = {
+  code?: string;
+  message?: string;
+};
+
 type TenantStoreProfileRow = {
   name: string | null;
   display_name: string | null;
@@ -78,10 +86,125 @@ function normalizeIngredientOptions(product: ProductRow) {
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
 }
 
-function orderNumber() {
-  const stamp = new Date().toISOString().replace(/\D/g, "").slice(0, 14);
-  const suffix = Math.random().toString(16).slice(2, 8).toUpperCase();
-  return `TKO-${stamp}-${suffix}`;
+function fallbackOrderNumber() {
+  const datePart = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date()).replace(/\D/g, "");
+  const suffix = Math.random().toString(36).slice(2, 5).toUpperCase();
+  return `TKO-${datePart}-${suffix}`;
+}
+
+async function nextOrderNumber(supabase: ReturnType<typeof createServiceClient>, tenantId: string, branchId: string) {
+  const { data, error } = await supabase.rpc("next_pos_order_no", {
+    p_tenant_id: tenantId,
+    p_branch_id: branchId,
+    p_prefix: "TKO",
+  });
+  if (error || typeof data !== "string" || !data.trim()) return fallbackOrderNumber();
+  return data;
+}
+
+function isLegacyLongOrderNo(value: string | undefined) {
+  return Boolean(value && /^TKO-\d{14,}-[A-Z0-9]{4,}$/i.test(value));
+}
+
+function isDuplicateOrderNoError(error: unknown) {
+  const writeError = error as SupabaseWriteError | null;
+  return writeError?.code === "23505" && String(writeError.message ?? "").includes("orders_tenant_id_branch_id_order_no_key");
+}
+
+async function findActiveDraft(
+  supabase: ReturnType<typeof createServiceClient>,
+  scope: Awaited<ReturnType<typeof requireOpenShift>>["scope"],
+  shiftId: string,
+) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id,order_no,metadata")
+    .eq("tenant_id", scope.tenantId)
+    .eq("branch_id", scope.branchId)
+    .eq("shift_id", shiftId)
+    .eq("pos_session_id", scope.sessionId)
+    .eq("device_code", scope.deviceCode)
+    .eq("order_type", "takeaway")
+    .eq("status", "draft")
+    .order("updated_at", { ascending: false })
+    .limit(10);
+
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as DraftOrderRow[]).find((order) => order.metadata?.hold_state !== "held") ?? null;
+}
+
+async function createDraftOrder(
+  supabase: ReturnType<typeof createServiceClient>,
+  scope: Awaited<ReturnType<typeof requireOpenShift>>["scope"],
+  shiftId: string,
+) {
+  let lastError: SupabaseWriteError | null = null;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const { data: createdDraft, error: draftCreateError } = await supabase
+      .from("orders")
+      .insert({
+        tenant_id: scope.tenantId,
+        branch_id: scope.branchId,
+        shift_id: shiftId,
+        order_no: await nextOrderNumber(supabase, scope.tenantId, scope.branchId),
+        order_type: "takeaway",
+        channel: "takeaway",
+        subtotal: 0,
+        discount_amount: 0,
+        total_amount: 0,
+        grand_total: 0,
+        tax_total: 0,
+        paid_total: 0,
+        status: "draft",
+        created_by: scope.userId,
+        cashier_user_id: scope.userId,
+        pos_session_id: scope.sessionId,
+        device_code: scope.deviceCode,
+        request_id: crypto.randomUUID(),
+        metadata: { source_app: "mobile_web", mode: "takeaway", opened_from: "sales_mode" },
+      })
+      .select("id,order_no")
+      .single<DraftOrderRow>();
+
+    if (!draftCreateError && createdDraft) return createdDraft;
+    if (!isDuplicateOrderNoError(draftCreateError)) {
+      throw new Error(draftCreateError?.message ?? "draft_order_create_failed");
+    }
+
+    lastError = draftCreateError;
+    const activeDraft = await findActiveDraft(supabase, scope, shiftId);
+    if (activeDraft) return activeDraft;
+  }
+
+  throw new Error(lastError?.message ?? "draft_order_create_failed");
+}
+
+async function shortenEmptyLegacyDraftOrderNo(
+  supabase: ReturnType<typeof createServiceClient>,
+  scope: Awaited<ReturnType<typeof requireOpenShift>>["scope"],
+  orderId: string,
+) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const shortOrderNo = await nextOrderNumber(supabase, scope.tenantId, scope.branchId);
+    const { error } = await supabase
+      .from("orders")
+      .update({ order_no: shortOrderNo, updated_at: new Date().toISOString() })
+      .eq("id", orderId)
+      .eq("tenant_id", scope.tenantId)
+      .eq("branch_id", scope.branchId)
+      .eq("status", "draft");
+
+    if (!error) return shortOrderNo;
+    if (!isDuplicateOrderNoError(error)) return null;
+  }
+
+  return null;
 }
 
 export default async function TakeawaySalesPage() {
@@ -132,32 +255,7 @@ export default async function TakeawaySalesPage() {
   let orderId = activeDraft?.id;
   let orderNo = activeDraft?.order_no;
   if (!orderId || !orderNo) {
-    const { data: createdDraft, error: draftCreateError } = await supabase
-      .from("orders")
-      .insert({
-        tenant_id: scope.tenantId,
-        branch_id: scope.branchId,
-        shift_id: shift.id,
-        order_no: orderNumber(),
-        order_type: "takeaway",
-        channel: "takeaway",
-        subtotal: 0,
-        discount_amount: 0,
-        total_amount: 0,
-        grand_total: 0,
-        tax_total: 0,
-        paid_total: 0,
-        status: "draft",
-        created_by: scope.userId,
-        cashier_user_id: scope.userId,
-        pos_session_id: scope.sessionId,
-        device_code: scope.deviceCode,
-        request_id: crypto.randomUUID(),
-        metadata: { source_app: "mobile_web", mode: "takeaway", opened_from: "sales_mode" },
-      })
-      .select("id,order_no")
-      .single<DraftOrderRow>();
-    if (draftCreateError || !createdDraft) throw new Error(draftCreateError?.message ?? "draft_order_create_failed");
+    const createdDraft = await createDraftOrder(supabase, scope, shift.id);
     orderId = createdDraft.id;
     orderNo = createdDraft.order_no;
   }
@@ -168,6 +266,11 @@ export default async function TakeawaySalesPage() {
     .eq("tenant_id", scope.tenantId)
     .eq("branch_id", scope.branchId)
     .eq("order_id", orderId);
+
+  if (orderId && isLegacyLongOrderNo(orderNo) && !((draftItems ?? []) as DraftItemRow[]).length) {
+    const shortOrderNo = await shortenEmptyLegacyDraftOrderNo(supabase, scope, orderId);
+    if (shortOrderNo) orderNo = shortOrderNo;
+  }
 
   const products: TakeawayProduct[] = ((productRows ?? []) as ProductRow[])
     .filter((product) => product.id && product.name)

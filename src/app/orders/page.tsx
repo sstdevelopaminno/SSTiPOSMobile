@@ -1,61 +1,47 @@
 import { MobileAppShell } from "@/components/layout/mobile-app-shell";
+import { OrdersListClient, type MobileOrderListItem } from "@/components/orders/orders-list-client";
 import { requireOpenShift } from "@/lib/permissions/guard";
 import { createServiceClient } from "@/lib/supabase/server";
 
-function money(value: number | null | undefined) {
-  return Number(value ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-function statusLabel(status: string | null | undefined) {
-  if (status === "paid" || status === "completed") return "ชำระแล้ว";
-  if (status === "draft") return "กำลังขาย";
-  if (status === "held") return "พักบิล";
-  if (status === "cancelled") return "ยกเลิก";
-  return status ?? "-";
-}
-
-function orderTypeLabel(type: string | null | undefined) {
-  if (type === "takeaway") return "กลับบ้าน";
-  if (type === "dine_in") return "โต๊ะ";
-  if (type === "delivery") return "เดลิเวอรี่";
-  return type ?? "order";
-}
+type OrderRow = {
+  id: string;
+  order_no: string | null;
+  order_type: string | null;
+  status: string | null;
+  grand_total: number | null;
+  total_amount: number | null;
+  created_at: string | null;
+};
 
 export default async function OrdersPage() {
   const { scope, shift } = await requireOpenShift("sales:list:view");
   const supabase = createServiceClient();
-  const { data: orders } = await supabase
+  const { data: orders, error } = await supabase
     .from("orders")
     .select("id,order_no,order_type,status,grand_total,total_amount,created_at")
     .eq("tenant_id", scope.tenantId)
     .eq("branch_id", scope.branchId)
     .eq("shift_id", shift.id)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(80);
+
+  if (error) throw new Error(error.message);
+
+  const orderItems: MobileOrderListItem[] = ((orders ?? []) as OrderRow[]).map((order) => ({
+    id: order.id,
+    orderNo: order.order_no ?? "-",
+    orderType: order.order_type,
+    status: order.status,
+    total: Number(order.grand_total ?? order.total_amount ?? 0),
+    createdAt: order.created_at,
+  }));
 
   return (
     <MobileAppShell title="รายการขาย" scope={scope}>
-      <section className="grid gap-3">
-        {(orders ?? []).length ? (
-          (orders ?? []).map((order) => (
-            <article key={order.id} className="card rounded-[18px] p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="m-0 text-[13px] font-bold text-[#7a8fa8]">{orderTypeLabel(order.order_type)}</p>
-                  <h2 className="m-0 mt-1 truncate text-[18px] font-black text-[#0f2745]">{order.order_no}</h2>
-                  <p className="m-0 mt-1 text-[13px] font-semibold text-[#7a8fa8]">{order.created_at ? new Date(order.created_at).toLocaleString("th-TH") : "-"}</p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <b className="block text-[18px] text-[#1677d9]">{money(order.grand_total ?? order.total_amount)} ฿</b>
-                  <span className="mt-2 inline-flex rounded-full bg-[#eef6ff] px-3 py-1 text-[12px] font-black text-[#17416f]">{statusLabel(order.status)}</span>
-                </div>
-              </div>
-            </article>
-          ))
-        ) : (
-          <div className="card rounded-[18px] p-5 text-[15px] font-bold text-[#587398]">ยังไม่มีรายการขายในกะนี้</div>
-        )}
-      </section>
+      <OrdersListClient orders={orderItems} />
     </MobileAppShell>
   );
 }

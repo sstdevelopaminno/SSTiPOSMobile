@@ -2,6 +2,9 @@ import { fail, ok } from "@/lib/api/response";
 import { readMobileSession } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type HeldOrderRow = {
   id: string;
   order_no: string;
@@ -24,8 +27,8 @@ type HeldItemRow = {
 export async function GET() {
   try {
     const scope = await readMobileSession();
-    if (!scope) return fail("missing_session", "Please sign in", 401);
-    if (!["owner", "manager", "staff"].includes(scope.role)) return fail("forbidden", "Forbidden", 403);
+    if (!scope) return fail("missing_session", "กรุณาเข้าสู่ระบบ", 401);
+    if (!["owner", "manager", "staff"].includes(scope.role)) return fail("forbidden", "ไม่มีสิทธิ์ดูบิลพัก", 403);
 
     const supabase = createServiceClient();
     const { data: orders, error: orderError } = await supabase
@@ -80,6 +83,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("[takeaway.held]", error);
-    return fail("held_list_failed", "Load held orders failed", 503);
+    return fail("held_list_failed", "โหลดรายการพักบิลไม่สำเร็จ", 503);
   }
 }

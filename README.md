@@ -42,6 +42,8 @@ The sales home bell shows a red unread dot when shift/order/product readiness no
 
 The sales shortcut row includes `รายการพัก` and a square `สมาชิก` action beside it. Sales mode cards use a consistent Lucide icon set for takeaway, table, and delivery entry points.
 
+The `สินค้า` page uses a clean responsive table-like product management UI with no product photos or row numbers. It keeps the existing tabs, search, pagination, add/edit/delete actions, and stock data source.
+
 ## Deployment
 Production alias: `https://sstiposmobile.vercel.app`
 

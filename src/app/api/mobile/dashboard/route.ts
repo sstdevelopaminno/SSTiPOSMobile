@@ -2,6 +2,9 @@ import { fail, ok } from "@/lib/api/response";
 import { readMobileSession } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   const scope = await readMobileSession();
   if (!scope) return fail("missing_session", "กรุณาเข้าสู่ระบบ", 401);

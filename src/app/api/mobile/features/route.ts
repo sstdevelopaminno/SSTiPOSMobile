@@ -5,6 +5,9 @@ import { mobileMenuItems, mobileSecondaryMenuItems } from "@/lib/permissions/mob
 import { createServiceClient } from "@/lib/supabase/server";
 import type { PosFeatureCode } from "@/types/contracts";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function resolveEnabledFeatures(tenantId: string, branchId: string, features: PosFeatureCode[]) {
   const supabase = createServiceClient();
   const featureSet = new Set(features);

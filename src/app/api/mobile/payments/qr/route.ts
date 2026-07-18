@@ -2,6 +2,9 @@ import { fail, ok } from "@/lib/api/response";
 import { readMobileSession } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type PaymentAccountRow = {
   id: string;
   branch_id: string | null;

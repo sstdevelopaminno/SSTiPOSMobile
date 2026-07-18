@@ -43,7 +43,8 @@ export function SalesNotificationBell({ notifications }: SalesNotificationBellPr
         type="button"
         onClick={openNotifications}
         aria-label={hasUnread ? `เปิดรายการแจ้งเตือน ${unreadCount} รายการใหม่` : "เปิดรายการแจ้งเตือน"}
-        className="relative flex h-12 w-12 items-center justify-center rounded-full border-0 bg-transparent text-[#17416f]"
+        title="แจ้งเตือน"
+        className="relative flex h-12 w-12 items-center justify-center rounded-full border border-[#e4effb] bg-white text-[#17416f] shadow-[0_8px_22px_rgba(15,39,69,0.1)] transition active:scale-95"
       >
         <Bell size={24} strokeWidth={2.25} />
         {hasUnread ? (

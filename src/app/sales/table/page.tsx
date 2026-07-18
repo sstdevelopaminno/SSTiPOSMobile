@@ -2,6 +2,9 @@ import { MobileAppShell } from "@/components/layout/mobile-app-shell";
 import { requireOpenShift } from "@/lib/permissions/guard";
 import { createServiceClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function tableTone(status: string | null | undefined) {
   if (status === "available") return "border-[#cfe2f5] bg-white text-[#0f2745]";
   if (status === "occupied" || status === "ordering") return "border-[#ffd6a7] bg-[#fff8ed] text-[#9a5b00]";

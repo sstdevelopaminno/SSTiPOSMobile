@@ -1,3 +1,4 @@
+import { LogoutButton } from "@/components/auth/logout-button";
 import { MobileAppShell } from "@/components/layout/mobile-app-shell";
 import { HeldOrdersLauncher } from "@/components/sales/held-orders-launcher";
 import { MemberLauncher } from "@/components/sales/member-launcher";
@@ -7,6 +8,9 @@ import { requireOpenShift } from "@/lib/permissions/guard";
 import { createServiceClient } from "@/lib/supabase/server";
 import { ChartNoAxesColumnIncreasing, CircleCheck, ClipboardList, PackageOpen, ShoppingCart, type LucideIcon } from "lucide-react";
 import Image from "next/image";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 function money(value: number) {
   return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -88,7 +92,12 @@ export default async function SalesPage() {
         </div>
       }
       scope={scope}
-      action={<SalesNotificationBell notifications={salesNotifications} />}
+      action={
+        <>
+          <SalesNotificationBell notifications={salesNotifications} />
+          <LogoutButton />
+        </>
+      }
     >
       <section className="grid gap-5">
         <div className="relative overflow-hidden rounded-[22px] border border-[#cfe3fa] bg-[#eaf6ff] p-4 shadow-[0_10px_26px_rgba(15,39,69,0.08)]">

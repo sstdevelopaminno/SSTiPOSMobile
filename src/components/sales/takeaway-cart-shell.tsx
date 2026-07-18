@@ -4,7 +4,8 @@ import { Banknote, CheckCircle2, ChevronLeft, ChevronRight, Landmark, Minus, Per
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { MemberLauncher, type SalesMember } from "@/components/sales/member-launcher";
 
 export type TakeawayCategory = {
   id: string;
@@ -247,6 +248,7 @@ export function TakeawayCartShell({
   const [transferQr, setTransferQr] = useState<TransferQrPayload | null>(null);
   const [transferQrLoading, setTransferQrLoading] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptSnapshot | null>(null);
+  const [, startReceiptCloseTransition] = useTransition();
   const [holdOpen, setHoldOpen] = useState(false);
   const [heldListOpen, setHeldListOpen] = useState(false);
   const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([]);
@@ -257,9 +259,13 @@ export function TakeawayCartShell({
   const [holdSubmitError, setHoldSubmitError] = useState("");
   const [discountMode, setDiscountMode] = useState<"percent" | "amount">("percent");
   const [discountInput, setDiscountInput] = useState("");
+  const [redeemPointsInput, setRedeemPointsInput] = useState("");
+  const [redeemStampsInput, setRedeemStampsInput] = useState("");
   const [holdPin, setHoldPin] = useState("");
   const [holdError, setHoldError] = useState("");
   const [holdLoading, setHoldLoading] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<SalesMember | null>(null);
+  const [memberEarned, setMemberEarned] = useState({ points: 0, stamps: 0 });
   const [cancelSuccess, setCancelSuccess] = useState<{ orderNo: string; message: string } | null>(null);
   const [addedNotice, setAddedNotice] = useState("");
   const [activeCategory, setActiveCategory] = useState(categories[0]?.name ?? LABELS.all);
@@ -306,15 +312,31 @@ export function TakeawayCartShell({
   const renderedProducts = useMemo(() => visibleProducts.slice(0, 40), [visibleProducts]);
 
   const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const hasCartItems = cart.length > 0;
   const subtotalAmount = cart.reduce((sum, item) => sum + item.quantity * item.price, 0);
   const rawDiscountValue = Math.max(0, Number(discountInput || 0));
-  const discountAmount = discountMode === "percent" ? Math.min(subtotalAmount, subtotalAmount * Math.min(rawDiscountValue, 100) / 100) : Math.min(subtotalAmount, rawDiscountValue);
+  const manualDiscountAmount = discountMode === "percent" ? Math.min(subtotalAmount, subtotalAmount * Math.min(rawDiscountValue, 100) / 100) : Math.min(subtotalAmount, rawDiscountValue);
+  const redeemedPoints = selectedMember ? Math.min(selectedMember.points, Math.max(0, Number(redeemPointsInput || 0))) : 0;
+  const redeemedStamps = selectedMember ? Math.min(selectedMember.stamps, Math.max(0, Number(redeemStampsInput || 0))) : 0;
+  const rewardDiscountAmount = Math.min(Math.max(0, subtotalAmount - manualDiscountAmount), redeemedPoints + redeemedStamps);
+  const discountAmount = Math.min(subtotalAmount, manualDiscountAmount + rewardDiscountAmount);
   const totalAmount = Math.max(0, subtotalAmount - discountAmount);
   const cashReceivedAmount = Number(cashReceivedInput || 0);
   const cashChangeAmount = Math.max(0, cashReceivedAmount - totalAmount);
+  const cashUnderpaid = paymentView === "cash" && cashReceivedInput.trim() !== "" && cashReceivedAmount < totalAmount;
   const pageCount = Math.max(1, Math.ceil(cart.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
   const visibleCart = useMemo(() => cart.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE), [cart, currentPage]);
+
+  useEffect(() => {
+    if (hasCartItems) return;
+    setDiscountInput("");
+    setRedeemPointsInput("");
+    setRedeemStampsInput("");
+    setSelectedMember(null);
+    setMemberEarned({ points: 0, stamps: 0 });
+    setDiscountOpen(false);
+  }, [hasCartItems]);
 
   function addProduct(product: TakeawayProduct, selectedIngredients?: ProductIngredientOption[]) {
     setCart((current) => {
@@ -435,8 +457,12 @@ export function TakeawayCartShell({
   function clearPaidBillState() {
     setCart([]);
     setDiscountInput("");
+    setRedeemPointsInput("");
+    setRedeemStampsInput("");
     setCashReceivedInput("");
     setTransferReference("");
+    setSelectedMember(null);
+    setMemberEarned({ points: 0, stamps: 0 });
     setPage(0);
     setProductPickerOpen(false);
     setDiscountOpen(false);
@@ -448,8 +474,9 @@ export function TakeawayCartShell({
     setPaymentOpen(false);
     setPaymentView("choose");
     setReceipt(null);
-    router.replace("/sales");
-    router.refresh();
+    startReceiptCloseTransition(() => {
+      router.replace("/sales");
+    });
   }
 
   function printReceiptAndClose() {
@@ -525,8 +552,11 @@ export function TakeawayCartShell({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           orderId: activeOrderId,
-          discountMode,
-          discountValue: rawDiscountValue,
+          discountMode: "amount",
+          discountValue: discountAmount,
+          memberId: selectedMember?.id,
+          memberPoints: memberEarned.points - redeemedPoints,
+          memberStamps: memberEarned.stamps - redeemedStamps,
           items: cart.map((item) => ({ productId: item.id, quantity: item.quantity })),
         }),
       });
@@ -573,7 +603,7 @@ export function TakeawayCartShell({
 
   async function checkout(paymentMethod: "cash" | "transfer") {
     if (!cart.length || paymentSubmitting) return;
-    const cashReceivedForCheckout = paymentMethod === "cash" ? Math.max(cashReceivedAmount, totalAmount) : undefined;
+    const cashReceivedForCheckout = paymentMethod === "cash" ? cashReceivedAmount : undefined;
     if (paymentMethod === "cash" && Number(cashReceivedForCheckout ?? 0) < totalAmount) {
       setPaymentError("\u0e23\u0e31\u0e1a\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14\u0e19\u0e49\u0e2d\u0e22\u0e01\u0e27\u0e48\u0e32\u0e22\u0e2d\u0e14\u0e23\u0e27\u0e21");
       return;
@@ -605,8 +635,11 @@ export function TakeawayCartShell({
           paymentMethod,
           cashReceived: cashReceivedForCheckout,
           referenceNo: paymentMethod === "transfer" ? transferReference.trim() || null : undefined,
-          discountMode,
-          discountValue: rawDiscountValue,
+          discountMode: "amount",
+          discountValue: discountAmount,
+          memberId: selectedMember?.id,
+          memberPoints: memberEarned.points - redeemedPoints,
+          memberStamps: memberEarned.stamps - redeemedStamps,
           items: cart.map((item) => ({ productId: item.id, quantity: item.quantity })),
         }),
       });
@@ -644,9 +677,18 @@ export function TakeawayCartShell({
               {activeOrderNo}
             </strong>
           </div>
-          <button type="button" style={{ display: "inline-flex", minHeight: 34, alignItems: "center", justifyContent: "center", border: "1px solid #d9e8f7", borderRadius: 999, background: "#fff", color: "#17416f", padding: "0 10px", fontSize: 12, fontWeight: 900, boxShadow: "0 4px 12px rgba(15,39,69,0.06)" }}>
-            {LABELS.member}
-          </button>
+          <div style={{ minWidth: 0 }}>
+            <MemberLauncher
+              orderId={activeOrderId}
+              selectedMember={selectedMember}
+              compact
+              disabled={!hasCartItems}
+              onMemberLinked={(member, earned) => {
+                setSelectedMember(member);
+                setMemberEarned(earned);
+              }}
+            />
+          </div>
           <Link href="/sales" style={{ display: "inline-flex", minHeight: 34, alignItems: "center", justifyContent: "center", gap: 3, border: "1px solid #d9e8f7", borderRadius: 999, background: "#fff", color: "#17416f", padding: "0 11px", fontSize: 12, fontWeight: 900, textDecoration: "none", boxShadow: "0 4px 12px rgba(15,39,69,0.06)" }}>
             <ChevronLeft size={14} />
             {LABELS.back}
@@ -680,7 +722,7 @@ export function TakeawayCartShell({
             <Plus size={18} />
             {LABELS.addProduct}
           </button>
-          <button type="button" onClick={() => setDiscountOpen(true)} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", gap: 6, border: "1px solid #d9e8f7", borderRadius: 13, background: "#fff", color: "#17416f", fontSize: 12, fontWeight: 900 }}>
+          <button type="button" disabled={!hasCartItems} onClick={() => setDiscountOpen(true)} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", gap: 6, border: "1px solid #d9e8f7", borderRadius: 13, background: hasCartItems ? "#fff" : "#f1f6fb", color: hasCartItems ? "#17416f" : "#9aadc2", fontSize: 12, fontWeight: 900, opacity: hasCartItems ? 1 : 0.65 }}>
             <Percent size={16} />
             {LABELS.discount}
           </button>
@@ -875,9 +917,45 @@ export function TakeawayCartShell({
               {LABELS.discountType}
               <input value={discountInput} onChange={(event) => setDiscountInput(event.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" placeholder={discountMode === "percent" ? "0%" : `0.00 ${BAHT}`} style={{ minHeight: 46, border: "1px solid #d9e8f7", borderRadius: 12, padding: "0 12px", color: "#0f2745", fontSize: 16, fontWeight: 900, outline: "none" }} />
             </label>
+            {selectedMember ? (
+              <div style={{ display: "grid", gap: 8, marginTop: 12, border: "1px solid #d9e8f7", borderRadius: 14, background: "#f8fbff", padding: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8, alignItems: "center" }}>
+                  <span style={{ minWidth: 0, color: "#0f2745", fontSize: 12, fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selectedMember.name}</span>
+                  <span style={{ color: "#587398", fontSize: 11, fontWeight: 800 }}>{selectedMember.points} คะแนน / {selectedMember.stamps} แต้ม</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8 }}>
+                  <label style={{ display: "grid", minWidth: 0, gap: 5, color: "#587398", fontSize: 11, fontWeight: 900 }}>
+                    ใช้คะแนน
+                    <input value={redeemPointsInput} onChange={(event) => setRedeemPointsInput(event.target.value.replace(/\D/g, "").slice(0, 7))} inputMode="numeric" placeholder="0" style={{ boxSizing: "border-box", width: "100%", minWidth: 0, minHeight: 42, border: "1px solid #d9e8f7", borderRadius: 12, padding: "0 10px", color: "#0f2745", fontSize: 15, fontWeight: 900, outline: "none" }} />
+                  </label>
+                  <label style={{ display: "grid", minWidth: 0, gap: 5, color: "#587398", fontSize: 11, fontWeight: 900 }}>
+                    ใช้แต้ม
+                    <input value={redeemStampsInput} onChange={(event) => setRedeemStampsInput(event.target.value.replace(/\D/g, "").slice(0, 7))} inputMode="numeric" placeholder="0" style={{ boxSizing: "border-box", width: "100%", minWidth: 0, minHeight: 42, border: "1px solid #d9e8f7", borderRadius: 12, padding: "0 10px", color: "#0f2745", fontSize: 15, fontWeight: 900, outline: "none" }} />
+                  </label>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6, color: "#587398", fontSize: 11, fontWeight: 800 }}>
+                  <span>ส่วนลดจากสมาชิก</span>
+                  <b style={{ color: "#d62929" }}>- {money(rewardDiscountAmount)} {BAHT}</b>
+                  <span>คงเหลือหลังใช้</span>
+                  <b style={{ color: "#0f2745" }}>{selectedMember.points - redeemedPoints} คะแนน / {selectedMember.stamps - redeemedStamps} แต้ม</b>
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginTop: 12, border: "1px solid #d9e8f7", borderRadius: 14, background: "#f8fbff", padding: 10, color: "#587398", fontSize: 12, fontWeight: 800 }}>
+                เลือกสมาชิกก่อน หากต้องการใช้คะแนนหรือแต้มเป็นส่วนลด
+              </div>
+            )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8, marginTop: 12, borderRadius: 12, background: "#f7fbff", padding: 10 }}>
               <span style={{ color: "#7a8fa8", fontSize: 11, fontWeight: 800 }}>{LABELS.subtotal}</span>
               <b style={{ color: "#17416f", fontSize: 12 }}>{money(subtotalAmount)} {BAHT}</b>
+              <span style={{ color: "#d62929", fontSize: 11, fontWeight: 800 }}>ส่วนลดทั่วไป</span>
+              <b style={{ color: "#d62929", fontSize: 12 }}>- {money(manualDiscountAmount)} {BAHT}</b>
+              {rewardDiscountAmount > 0 ? (
+                <>
+                  <span style={{ color: "#d62929", fontSize: 11, fontWeight: 800 }}>ส่วนลดสมาชิก</span>
+                  <b style={{ color: "#d62929", fontSize: 12 }}>- {money(rewardDiscountAmount)} {BAHT}</b>
+                </>
+              ) : null}
               <span style={{ color: "#d62929", fontSize: 11, fontWeight: 800 }}>{LABELS.discount}</span>
               <b style={{ color: "#d62929", fontSize: 12 }}>- {money(discountAmount)} {BAHT}</b>
               <span style={{ color: "#1677d9", fontSize: 12, fontWeight: 900 }}>{LABELS.totalAfterDiscount}</span>
@@ -1020,12 +1098,17 @@ export function TakeawayCartShell({
                     <span style={{ color: "#334155", fontSize: 13, fontWeight: 900 }}>{LABELS.change}</span>
                     <b style={{ color: "#16a34a", fontSize: 26, fontWeight: 950, lineHeight: 1 }}>{BAHT}{money(cashChangeAmount)}</b>
                   </div>
+                  {cashUnderpaid ? (
+                    <p role="alert" style={{ width: "min(100%, 414px)", margin: 0, border: "1px solid #fecaca", borderRadius: 10, background: "#fff1f1", color: "#d62929", padding: "8px 10px", textAlign: "center", fontSize: 12, fontWeight: 900 }}>
+                      รับเงินสดต้องไม่น้อยกว่ายอดที่ต้องชำระ
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
               <footer style={{ position: "fixed", right: 0, bottom: "max(104px, env(safe-area-inset-bottom) + 100px)", left: 0, zIndex: 210, display: "grid", gridTemplateColumns: "88px minmax(0, 232px)", justifyContent: "center", gap: 10, alignItems: "center", padding: "0 14px", pointerEvents: "auto" }}>
                 <button type="button" onClick={() => setPaymentView("choose")} style={{ minHeight: 44, border: "1px solid #fecaca", borderRadius: 9, background: "#fff1f1", color: "#b91c1c", fontSize: 11, fontWeight: 900 }}>{LABELS.cancelBill}</button>
-                <button type="button" onClick={() => checkout("cash")} disabled={Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", gap: 9, border: 0, borderRadius: 9, background: Boolean(paymentSubmitting) || cashReceivedAmount < totalAmount ? "#7aa3e8" : "#164aa6", color: "#fff", fontSize: 13, fontWeight: 950 }}>{paymentSubmitting === "cash" ? "..." : <><span>{LABELS.confirmPayment}</span><CheckCircle2 size={15} /></>}</button>
+                <button type="button" onClick={() => checkout("cash")} disabled={Boolean(paymentSubmitting) || cashUnderpaid} style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "center", gap: 9, border: 0, borderRadius: 9, background: Boolean(paymentSubmitting) || cashUnderpaid ? "#7aa3e8" : "#164aa6", color: "#fff", fontSize: 13, fontWeight: 950 }}>{paymentSubmitting === "cash" ? "..." : <><span>{LABELS.confirmPayment}</span><CheckCircle2 size={15} /></>}</button>
               </footer>
               {paymentError ? <p style={{ margin: 0, color: "#d62929", fontSize: 12, fontWeight: 800 }}>{paymentError}</p> : null}
               {paymentSubmitting === "cash" ? (
@@ -1097,14 +1180,12 @@ export function TakeawayCartShell({
             <section style={{ height: "calc(100dvh - max(18px, env(safe-area-inset-bottom)))", display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto", gap: 7, maxWidth: 430, margin: "0 auto" }}>
               <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <h2 style={{ margin: 0, color: "#1d2430", fontSize: 19, fontWeight: 900 }}>{LABELS.receiptTitle}</h2>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                  <button type="button" onClick={printReceiptAndClose} style={{ minWidth: 96, minHeight: 38, border: 0, borderRadius: 9, background: "#ff681f", color: "#fff", fontSize: 12, fontWeight: 950, boxShadow: "0 8px 18px rgba(255,104,31,0.18)" }}>{LABELS.printReceipt}</button>
                   <button type="button" onClick={closeReceiptWindow} style={{ minWidth: 72, minHeight: 38, border: "1px solid #d9e8f7", borderRadius: 9, background: "#fff", color: "#0f2745", fontSize: 12, fontWeight: 800 }}>{LABELS.closeWindow}</button>
                 </div>
               </header>
               <div style={{ minHeight: 0, maxHeight: "calc(100dvh - 134px)", overflowY: "auto", scrollbarWidth: "none", border: "1px solid #d9e8f7", borderRadius: 10, background: "#fff", padding: 8 }}>
-                <div style={{ display: "grid", justifyItems: "center", margin: "-2px 0 8px" }}>
-                  <button type="button" onClick={printReceiptAndClose} style={{ minWidth: 112, minHeight: 40, border: 0, borderRadius: 10, background: "#ff681f", color: "#fff", fontSize: 12, fontWeight: 950, boxShadow: "0 8px 18px rgba(255,104,31,0.18)" }}>{LABELS.printReceipt}</button>
-                </div>
                 <div style={{ display: "grid", justifyItems: "center", textAlign: "center", borderBottom: "1px dashed #c9dbf2", paddingBottom: 7 }}>
                   <ReceiptLogoImage src={receiptStoreProfile.logoUrl} alt={receiptStoreProfile.displayName || "CpIPOS"} />
                   <h3 style={{ margin: "4px 0 0", color: "#111827", fontSize: 15, fontWeight: 950 }}>{receiptStoreProfile.displayName || LABELS.storeName}</h3>

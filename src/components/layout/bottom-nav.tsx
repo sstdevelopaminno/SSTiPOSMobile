@@ -24,10 +24,10 @@ export function BottomNav({ role }: { role: BranchRole }) {
     >
       <nav
         aria-label="เมนูหลัก"
-        className="pointer-events-auto relative mx-auto h-[84px] w-full max-w-[390px] overflow-visible"
+        className="pointer-events-auto relative mx-auto h-[96px] w-full max-w-[390px] overflow-visible"
         style={{
           position: "relative",
-          height: 84,
+          height: 96,
           width: "100%",
           maxWidth: 390,
           margin: "0 auto",
@@ -38,7 +38,7 @@ export function BottomNav({ role }: { role: BranchRole }) {
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
           preserveAspectRatio="none"
-          viewBox="0 0 430 84"
+          viewBox="0 0 430 96"
           style={{
             position: "absolute",
             inset: 0,
@@ -50,7 +50,7 @@ export function BottomNav({ role }: { role: BranchRole }) {
           }}
         >
           <path
-            d="M22 8 H154 C176 8 178 44 215 44 C252 44 254 8 276 8 H408 C420 8 430 18 430 30 V62 C430 74 420 84 408 84 H22 C10 84 0 74 0 62 V30 C0 18 10 8 22 8 Z"
+            d="M22 10 H142 C172 10 170 66 215 66 C260 66 258 10 288 10 H408 C420 10 430 20 430 32 V74 C430 86 420 96 408 96 H22 C10 96 0 86 0 74 V32 C0 20 10 10 22 10 Z"
             fill="#fff"
             stroke="#cfe4fb"
             strokeWidth="1"
@@ -85,7 +85,7 @@ export function BottomNav({ role }: { role: BranchRole }) {
                     zIndex: 10,
                     display: "flex",
                     minWidth: 0,
-                    minHeight: 70,
+                    minHeight: 76,
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "flex-start",
@@ -102,9 +102,9 @@ export function BottomNav({ role }: { role: BranchRole }) {
                     className="flex flex-col items-center justify-center rounded-full border bg-white"
                     style={{
                       display: "flex",
-                      width: 56,
-                      height: 56,
-                      marginTop: -6,
+                      width: 80,
+                      height: 80,
+                      marginTop: 10,
                       flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "center",
@@ -113,16 +113,16 @@ export function BottomNav({ role }: { role: BranchRole }) {
                       borderRadius: 999,
                       background: "#fff",
                       color: active ? "#1677d9" : "#214461",
-                      boxShadow: active ? "0 7px 18px rgba(22, 119, 217, 0.2)" : "0 5px 14px rgba(22, 119, 217, 0.12)",
+                      boxShadow: active ? "0 12px 26px rgba(22, 119, 217, 0.23)" : "0 8px 22px rgba(22, 119, 217, 0.15)",
                       transform: active ? "scale(1.03)" : "scale(1)",
                       transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
                     }}
                   >
-                    <Icon aria-hidden="true" size={28} strokeWidth={active ? 2.45 : 2.25} />
+                    <Icon aria-hidden="true" size={36} strokeWidth={active ? 2.45 : 2.25} />
                     <span
                       style={{
                         color: active ? "#1677d9" : "#214461",
-                        fontSize: 9,
+                        fontSize: 10,
                         fontWeight: 900,
                         lineHeight: 1.05,
                         whiteSpace: "nowrap",

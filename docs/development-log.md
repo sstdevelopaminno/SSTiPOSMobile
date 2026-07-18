@@ -1,5 +1,14 @@
 ﻿# Development Log
 
+## 2026-07-18 Stock Menu UI Refresh
+
+- Restyled the mobile stock menu to match the provided reference: larger product/ingredient tabs, taller search control, larger product and ingredient action buttons, rounded white list container, taller product rows, bigger edit/delete touch targets, and product thumbnails.
+- Removed the visible latest stock deduction panel from the stock page UI.
+- Verification passed: `npm run lint`, `npm run typecheck`.
+
+- Follow-up stock UI adjustment: removed food-like product thumbnails, replaced them with compact neutral placeholders, and tightened mobile sizing so columns fit the 430px shell more cleanly.
+- Verification passed after the follow-up: `npm run typecheck`, `npm run lint`.
+
 ## 2026-07-16 Web Push and Cash Keypad Stability
 
 - Added Web Push backend routes for VAPID public key lookup, subscription save, and branch-scoped notification send.
@@ -466,4 +475,33 @@
 - Replaced the self-unregistering `public/sw.js` with a stable pass-through service worker that claims clients and posts readiness messages without forcing navigation.
 - Updated the web app manifest with app id, scope, display overrides, shortcuts, and Android/iOS-friendly metadata.
 - Per user instruction, this change was documented before commit/push/deploy; no release action was taken in this step.
+
+## 2026-07-18 Mobile Stock and Sales Cleanup
+
+- Fixed Mobile takeaway checkout issues found during manual testing:
+  - duplicate `orders_tenant_id_branch_id_order_no_key` when draft order numbers collided now retries the draft order number path.
+  - stock deduction request IDs are made unique per ingredient to avoid `idx_stock_movements_tenant_branch_request_id` collisions.
+  - mobile checkout RPC casts payment method text to `public.payment_method`.
+- Improved receipt flow:
+  - moved the print action to the receipt header next to close.
+  - closing the receipt returns directly to `/sales`.
+  - cash payment now warns immediately when received cash is lower than the payable total.
+- Added realtime-style stock refresh for Mobile stock via `/api/mobile/stock`, polling/focus refresh, and recent stock movement display.
+- Built Mobile sales list improvements:
+  - `/orders` supports search/filter.
+  - bill rows can open `/orders/[orderId]` to view bill details.
+- Reworked Mobile stock screen:
+  - product and ingredient lists use compact table-style rows.
+  - list pagination currently shows 5 rows per page.
+  - product category selection uses `product_categories` from the shared database instead of free text.
+  - SKU/product code is no longer editable in the modal; new product codes are generated automatically by the API.
+  - products and ingredients can be added, edited, and deleted/disabled; ingredient quantity can be adjusted.
+  - the top product/ingredient control panel is sticky again per the latest request.
+- Latest verification in `E:/SSTiPOSMobile`:
+  - `npm run typecheck` passed.
+  - `npm run lint` passed before the final sticky/pagination tweak; after that tweak, `npm run typecheck` passed.
+- Notes for the next chat:
+  - User is tired of repeated UI adjustments. Continue carefully and change only the exact requested item.
+  - Current visual concern is the Mobile stock top card/sticky positioning; avoid broad redesign unless explicitly requested.
+  - Do not drop or remove shared Supabase schema/table/column immediately; keep safe deprecate/compatibility flow.
 

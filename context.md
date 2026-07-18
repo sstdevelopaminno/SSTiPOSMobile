@@ -14,3 +14,4 @@ Implementation notes:
 - Mobile takeaway receipts use the store `logo_url` when available and fall back to the full system logo `/brand/cpipos-logo.png`, matching the main SSTiPOS receipt fallback.
 - The sales home bell shows a red unread dot and opens an in-app notification list for current shift/order/product readiness notices.
 - The sales shortcut row pairs `รายการพัก` with a square `สมาชิก` action, and the three sales mode cards use consistent Lucide icons.
+- The mobile stock/product management page uses a table-like responsive list without product images or row sequence numbers, keeping search, tabs, pagination, edit/delete, and add-item handlers wired to the existing stock data flow.
